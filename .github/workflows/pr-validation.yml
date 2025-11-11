@@ -1,0 +1,171 @@
+name: PR Validation
+
+# Fast checks that run on every PR
+# These are quick (5-10 minutes) vs full builds (45+ minutes)
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+# Cancel previous runs when new commit pushed
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  # Job 1: Check that documentation is up to date
+  docs-check:
+    name: Documentation Check
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Check for broken links in README
+        run: |
+          # Check that all referenced files exist
+          echo "Checking documentation links..."
+
+          # Check main README links
+          if ! grep -q "ARCHITECTURE.md" README.md; then
+            echo "❌ README should reference ARCHITECTURE.md"
+            exit 1
+          fi
+
+          # Verify documentation files exist
+          for doc in docs/ARCHITECTURE.md docs/ROADMAP.md docs/QUICKSTART.md; do
+            if [ ! -f "$doc" ]; then
+              echo "❌ Missing documentation file: $doc"
+              exit 1
+            fi
+          done
+
+          echo "✅ Documentation structure looks good"
+
+  # Job 2: Validate pixi configuration
+  pixi-validation:
+    name: Validate pixi.toml
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Check pixi.toml syntax
+        run: |
+          if [ ! -f "pixi.toml" ]; then
+            echo "❌ pixi.toml not found"
+            exit 1
+          fi
+
+          # Basic syntax check
+          echo "Checking pixi.toml syntax..."
+
+          # Check required fields
+          grep -q "name = \"orion\"" pixi.toml || {
+            echo "❌ pixi.toml missing project name"
+            exit 1
+          }
+
+          grep -q "nodejs = \"22" pixi.toml || {
+            echo "❌ pixi.toml should specify nodejs 22.x"
+            exit 1
+          }
+
+          grep -q "python = \"3.11" pixi.toml || {
+            echo "❌ pixi.toml should specify python 3.11.x"
+            exit 1
+          }
+
+          echo "✅ pixi.toml looks valid"
+
+  # Job 3: Check that .gitignore is correct
+  gitignore-check:
+    name: Check .gitignore
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Verify .gitignore includes VSCode artifacts
+        run: |
+          echo "Checking .gitignore..."
+
+          # Check that VSCode build artifacts are ignored
+          if ! grep -q "^vscode/$" .gitignore; then
+            echo "❌ .gitignore should include vscode/ directory"
+            exit 1
+          fi
+
+          if ! grep -q "VSCode-.*" .gitignore; then
+            echo "❌ .gitignore should include VSCode-* build directories"
+            exit 1
+          fi
+
+          if ! grep -q "node_modules/" .gitignore; then
+            echo "❌ .gitignore should include node_modules/"
+            exit 1
+          fi
+
+          echo "✅ .gitignore looks correct"
+
+  # Job 4: Verify no large files committed
+  size-check:
+    name: Check for large files
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Need full history to check file sizes
+
+      - name: Check for files >10MB
+        run: |
+          echo "Checking for large files..."
+
+          # Find files larger than 10MB
+          large_files=$(find . -type f -size +10M -not -path "./.git/*" 2>/dev/null || true)
+
+          if [ -n "$large_files" ]; then
+            echo "❌ Found files larger than 10MB:"
+            echo "$large_files"
+            echo ""
+            echo "Large files should not be committed to git."
+            echo "Use Git LFS for binaries or exclude them in .gitignore"
+            exit 1
+          fi
+
+          echo "✅ No large files detected"
+
+  # Job 5: Summary
+  validation-summary:
+    name: Validation Summary
+    runs-on: ubuntu-latest
+    needs: [docs-check, pixi-validation, gitignore-check, size-check]
+    if: always()
+
+    steps:
+      - name: Check all validations passed
+        run: |
+          echo "Validation Summary:"
+          echo "-------------------"
+
+          # Check if any job failed
+          if [ "${{ needs.docs-check.result }}" != "success" ] || \
+             [ "${{ needs.pixi-validation.result }}" != "success" ] || \
+             [ "${{ needs.gitignore-check.result }}" != "success" ] || \
+             [ "${{ needs.size-check.result }}" != "success" ]; then
+            echo "❌ Some validation checks failed"
+            exit 1
+          fi
+
+          echo "✅ All validation checks passed!"
+          echo ""
+          echo "Next step: Full CI build will run on main branch merge"
