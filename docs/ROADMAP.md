@@ -11,7 +11,7 @@
 ### Tasks
 
 #### Day 1-2: Environment Setup
-- [ ] Install build dependencies (Node.js 18+, Python 3, build-essential)
+- [ ] Install build dependencies (Node.js 22.x, Python 3.11, build-essential)
 - [ ] Clone VSCodium repository
 - [ ] Successful development build
 - [ ] Test that it runs
@@ -28,12 +28,17 @@ git pull
 git checkout -b ornl/orion-studio-main
 
 # Build
-./get_repo.sh  # Downloads VSCode source
-yarn install   # Install dependencies
-yarn gulp vscode-linux-x64-min  # Build (faster dev build)
+VSCODE_QUALITY=stable ./get_repo.sh  # Downloads VSCode source
+npm install    # Install dependencies (npm, not yarn!)
+npm run gulp -- vscode-linux-x64-min  # Build (faster dev build)
 
 # Test run
 ./VSCode-linux-x64/bin/code-oss
+
+# Or using pixi (from orion root):
+pixi run get-vscode
+pixi run build-vscode
+pixi run run-vscode
 ```
 
 #### Day 3-4: Project Infrastructure

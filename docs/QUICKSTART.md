@@ -9,17 +9,19 @@ This guide will get you from zero to a working VSCode fork build in ~2 hours.
 ## Prerequisites Check
 
 ```bash
-# Check Node.js (need 18.x or higher)
-node --version  # Should be v18.x.x or higher
+# Check Node.js (need 22.x - VSCode requirement)
+node --version  # Should be v22.x.x
 
-# Check Python
-python3 --version  # Should be 3.8+
+# Check Python (need 3.11 - node-gyp requirement)
+python3 --version  # Should be 3.11.x (not 3.14+)
 
 # Check build tools
-gcc --version
+gcc --version  # or clang on macOS
 make --version
 git --version
 ```
+
+**Note:** As of 2024, VSCode **no longer supports yarn** - use **npm** instead (comes with Node.js).
 
 ### Install Missing Dependencies
 
@@ -36,12 +38,11 @@ sudo apt-get install -y \
   git \
   curl
 
-# Install Node.js 18
-curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
+# Install Node.js 22 (VSCode requirement)
+curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash -
 sudo apt-get install -y nodejs
 
-# Install Yarn
-sudo npm install -g yarn
+# npm comes with Node.js - no need to install yarn
 ```
 
 **RHEL/CentOS:**
@@ -54,12 +55,11 @@ sudo yum install -y \
   python3 \
   git
 
-# Install Node.js 18
-curl -fsSL https://rpm.nodesource.com/setup_18.x | sudo bash -
+# Install Node.js 22 (VSCode requirement)
+curl -fsSL https://rpm.nodesource.com/setup_22.x | sudo bash -
 sudo yum install -y nodejs
 
-# Install Yarn
-sudo npm install -g yarn
+# npm comes with Node.js - no need to install yarn
 ```
 
 ---
@@ -76,17 +76,21 @@ cd orion
 git clone https://github.com/VSCodium/vscodium.git
 cd vscodium
 
-# This will download the VSCode source
-./get_repo.sh
+# Download the VSCode source (IMPORTANT: Must set VSCODE_QUALITY)
+VSCODE_QUALITY=stable ./get_repo.sh
+
+# Or using pixi (from orion root):
+pixi run get-vscode
 ```
 
 **What's happening:**
 - VSCodium is a build script wrapper around VSCode source
+- `VSCODE_QUALITY=stable` tells get_repo.sh which VSCode version to download
 - `get_repo.sh` clones the actual Microsoft VSCode repository
 - You'll see a new `vscode/` directory appear
 
 **Troubleshooting:**
-- If `get_repo.sh` fails, check internet connection
+- If `get_repo.sh` fails without VSCODE_QUALITY, you'll see "Retrieve latest version" but no vscode/ directory
 - If git clone is slow, try: `git clone --depth 1 https://github.com/VSCodium/vscodium.git`
 
 ---
@@ -97,28 +101,38 @@ cd vscodium
 cd vscode
 
 # Install dependencies (this takes 15-30 minutes)
-yarn install
+npm install
 
 # Build (this takes 20-40 minutes)
-yarn gulp vscode-linux-x64-min
+# For macOS ARM (M1/M2/M3):
+npm run gulp -- vscode-darwin-arm64
 
-# The 'min' suffix means faster build for development
-# Production builds use 'vscode-linux-x64' (slower but optimized)
+# For macOS Intel:
+npm run gulp -- vscode-darwin-x64
+
+# For Linux:
+npm run gulp -- vscode-linux-x64-min
+
+# Or using pixi (from orion root) - handles everything:
+pixi run build-vscode
 ```
+
+**IMPORTANT:** VSCode switched from **yarn to npm** in recent versions. The preinstall script explicitly blocks yarn usage.
 
 **Grab coffee ☕** - This will take a while on first build.
 
 **What's building:**
 - TypeScript → JavaScript compilation
 - Electron bundling
-- Node native modules
+- Node native modules (requires Node 22.x, Python 3.11)
 - Monaco editor
 - All built-in extensions
 
 **Troubleshooting:**
+- "Seems like you are using yarn" error? Use `npm install` instead
 - Out of memory? Close other apps or add swap space
-- Build fails with node-gyp error? Install python2 (some modules need it)
-- Errors about missing packages? Re-run `yarn install`
+- Build fails with node-gyp error? Ensure Node 22.x and Python 3.11 (not 3.14+)
+- Errors about missing packages? Re-run `npm install`
 
 ---
 
@@ -126,8 +140,14 @@ yarn gulp vscode-linux-x64-min
 
 ```bash
 # From vscode/ directory
-./scripts/code.sh
 
+# macOS:
+open ../VSCode-darwin-arm64/Code\ -\ OSS.app
+# Or using pixi (from orion root):
+pixi run run-vscode
+
+# Linux:
+./scripts/code.sh
 # Or directly:
 ../VSCode-linux-x64/bin/code-oss
 ```
@@ -143,7 +163,7 @@ yarn gulp vscode-linux-x64-min
 - [ ] Can open a folder
 - [ ] Can create a new file
 - [ ] File → Preferences works
-- [ ] Terminal panel works (Ctrl+`)
+- [ ] Terminal panel works (Ctrl+` or Cmd+`)
 
 ---
 
@@ -173,17 +193,20 @@ nano product.json
 **Rebuild:**
 ```bash
 # Clean old build
-rm -rf ../VSCode-linux-x64
+rm -rf ../VSCode-darwin-arm64  # or ../VSCode-linux-x64 on Linux
 
 # Rebuild (faster this time, ~10 minutes)
-yarn gulp vscode-linux-x64-min
+npm run gulp -- vscode-darwin-arm64  # or vscode-linux-x64-min on Linux
+
+# Or using pixi:
+pixi run rebuild-vscode
 
 # Test
-./scripts/code.sh
+open ../VSCode-darwin-arm64/Code\ -\ OSS.app  # or ./scripts/code.sh on Linux
 ```
 
 **You should see:**
-- Window title: "Neutron Studio"
+- Window title: "Orion Studio"
 - About dialog shows "Orion Studio"
 
 ---
@@ -217,7 +240,7 @@ cd vscode/src/vs/
 echo "console.log('Hello from Orion Studio!');" >> code/electron-main/main.ts
 
 # Rebuild just the changed files (incremental build)
-yarn watch  # This runs in background, auto-rebuilds on changes
+npm run watch  # This runs in background, auto-rebuilds on changes
 ```
 
 ### Test Changes
@@ -318,11 +341,11 @@ import 'vs/neutron/browser/neutron.contribution';
 
 ```bash
 cd vscode
-yarn gulp vscode-linux-x64-min
-./scripts/code.sh
+npm run gulp -- vscode-darwin-arm64  # or vscode-linux-x64-min on Linux
+# Then open the app as shown in Step 3
 
 # In the app:
-# Press Ctrl+Shift+P (Command Palette)
+# Press Cmd+Shift+P (macOS) or Ctrl+Shift+P (Linux/Windows) - Command Palette
 # Type "Hello Orion"
 # Press Enter
 ```
@@ -370,12 +393,14 @@ yarn gulp vscode-linux-x64-min
 ### Fast Iteration
 ```bash
 # Terminal 1: Watch mode (auto-rebuild on changes)
-yarn watch
+npm run watch
 
-# Terminal 2: Test
+# Terminal 2: Test (macOS)
+open ../VSCode-darwin-arm64/Code\ -\ OSS.app
+# Or Linux:
 ./scripts/code.sh
 
-# Make changes → Save → Reload window (Ctrl+R in app)
+# Make changes → Save → Reload window (Cmd+R on macOS, Ctrl+R on Linux)
 ```
 
 ### Debug Logging
@@ -390,18 +415,22 @@ console.log('DEBUG:', variableName);
 ### TypeScript Compilation Errors
 ```bash
 # Check for errors
-yarn compile
+npm run compile
 
 # Or specific file
-yarn tsc --noEmit src/vs/neutron/browser/commands/helloCommand.ts
+npx tsc --noEmit src/vs/neutron/browser/commands/helloCommand.ts
 ```
 
 ### Clean Build
 ```bash
 # If things get weird, clean and rebuild
 git clean -xfd  # WARNING: Deletes all untracked files
-yarn install
-yarn gulp vscode-linux-x64-min
+npm install
+npm run gulp -- vscode-darwin-arm64  # or vscode-linux-x64-min on Linux
+
+# Or using pixi:
+pixi run clean-vscode
+pixi run build-vscode
 ```
 
 ---
@@ -412,7 +441,7 @@ yarn gulp vscode-linux-x64-min
 **Problem:** Import path wrong or module not compiled
 **Solution:**
 ```bash
-yarn compile
+npm run compile
 # Check import path matches file location
 ```
 
@@ -442,11 +471,11 @@ sudo swapon /swapfile
 **Solution:**
 ```bash
 # Rebuild the specific module
-yarn gulp compile-build
+npm run gulp -- compile-build
 
 # Or force clean rebuild
 rm -rf out
-yarn gulp vscode-linux-x64-min
+npm run gulp -- vscode-darwin-arm64  # or vscode-linux-x64-min on Linux
 ```
 
 ---
@@ -466,26 +495,34 @@ Now that you have a working development environment:
 ## Useful Commands Reference
 
 ```bash
+# Using pixi (recommended - from orion root):
+pixi run get-vscode         # Download VSCode source
+pixi run build-vscode       # Full build (npm install + gulp)
+pixi run rebuild-vscode     # Rebuild without npm install
+pixi run clean-vscode       # Clean build artifacts
+pixi run run-vscode         # Launch the app
+
+# Manual commands (from vscode/ directory):
 # Development build (fast)
-yarn gulp vscode-linux-x64-min
+npm run gulp -- vscode-darwin-arm64        # macOS ARM
+npm run gulp -- vscode-darwin-x64          # macOS Intel
+npm run gulp -- vscode-linux-x64-min       # Linux
 
 # Production build (optimized, slow)
-yarn gulp vscode-linux-x64
+npm run gulp -- vscode-darwin-arm64        # Same target, just takes longer first time
+npm run gulp -- vscode-linux-x64           # Linux production
 
 # Watch mode (auto-rebuild)
-yarn watch
+npm run watch
 
 # Compile TypeScript only
-yarn compile
+npm run compile
 
 # Run tests
-yarn test
-
-# Package as AppImage
-./scripts/package-appimage.sh
+npm test
 
 # Clean everything
-git clean -xfd && yarn install
+git clean -xfd && npm install
 ```
 
 ---
