@@ -161,3 +161,43 @@ temp/
 # VSCode extension development
 extensions/*/out/
 extensions/*/node_modules/
+
+# VSCode/VSCodium build outputs
+VSCode-linux-x64/
+VSCode-linux-ia32/
+VSCode-linux-arm64/
+VSCode-linux-arm/
+VSCode-win32-x64/
+VSCode-win32-ia32/
+VSCode-darwin/
+VSCode-darwin-arm64/
+
+# VSCode build system
+.build/
+out-build/
+remote/
+sql/
+product.json.bak
+
+# VSCode submodule (if using git submodule approach)
+vscode/
+
+# Package artifacts
+*.deb
+*.rpm
+*.AppImage
+*.dmg
+*.exe
+*.msi
+*.pkg
+
+# Pixi/conda environments (for testing)
+.pixi/
+*.pixi.lock
+
+# Downloaded extensions for bundling
+extensions/*.vsix
+extensions/**/extension/
+# pixi environments
+.pixi/*
+!.pixi/config.toml

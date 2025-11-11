@@ -1,0 +1,130 @@
+name: CI Build
+
+# When to run:
+# - On pull requests to any branch
+# - On pushes to main branch
+# - Manual trigger via workflow_dispatch
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+# Cancel in-progress runs if new commit pushed
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-linux:
+    name: Build on Linux
+    runs-on: ubuntu-22.04  # Use Ubuntu 22.04 LTS
+
+    # Timeout after 90 minutes (builds can be slow)
+    timeout-minutes: 90
+
+    steps:
+      # Step 1: Checkout the orion repository
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1  # Shallow clone for speed
+
+      # Step 2: Set up Node.js 22.x
+      # Why? VSCode requires Node 22.x specifically
+      - name: Set up Node.js 22.x
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22.x'
+
+      # Step 3: Set up Python 3.11
+      # Why? node-gyp (for native modules) needs Python
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      # Step 4: Install system dependencies
+      # Why? VSCode native modules need these libraries
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            build-essential \
+            g++ \
+            libx11-dev \
+            libxkbfile-dev \
+            libsecret-1-dev \
+            libkrb5-dev
+
+      # Step 5: Clone VSCodium
+      # Why? We don't commit vscodium/ to our repo (too large)
+      - name: Clone VSCodium
+        run: |
+          git clone --depth 1 https://github.com/VSCodium/vscodium.git vscodium
+          cd vscodium
+          echo "VSCodium cloned: $(git rev-parse --short HEAD)"
+
+      # Step 6: Download VSCode source
+      # Why? get_repo.sh downloads the actual VSCode code
+      - name: Download VSCode source
+        run: |
+          cd vscodium
+          VSCODE_QUALITY=stable ./get_repo.sh
+        env:
+          # Prevent git safe.directory issues in CI
+          CI_BUILD: "no"
+
+      # Step 7: Cache npm dependencies
+      # Why? Speeds up builds by reusing node_modules
+      # This saves 10-15 minutes per build!
+      - name: Cache npm dependencies
+        uses: actions/cache@v4
+        with:
+          path: vscodium/vscode/node_modules
+          key: ${{ runner.os }}-node-${{ hashFiles('vscodium/vscode/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-
+
+      # Step 8: Install npm dependencies
+      # Why? Download all packages needed to build VSCode
+      - name: Install npm dependencies
+        run: |
+          cd vscodium/vscode
+          npm install
+        env:
+          # Increase memory for npm
+          NODE_OPTIONS: "--max-old-space-size=8192"
+
+      # Step 9: Build VSCode
+      # Why? This is the actual compile step
+      - name: Build VSCode
+        run: |
+          cd vscodium/vscode
+          npm run gulp -- vscode-linux-x64-min
+        env:
+          # Increase memory for build
+          NODE_OPTIONS: "--max-old-space-size=8192"
+
+      # Step 10: Verify build output exists
+      # Why? Make sure the build actually produced the app
+      - name: Verify build output
+        run: |
+          if [ -f "vscodium/VSCode-linux-x64/code-oss" ]; then
+            echo "✅ Build successful: code-oss binary exists"
+            ls -lh vscodium/VSCode-linux-x64/code-oss
+          else
+            echo "❌ Build failed: code-oss binary not found"
+            exit 1
+          fi
+
+      # Step 11: (Optional) Upload build artifact
+      # Why? Allows downloading the built app from CI
+      # Disabled by default - uncomment to enable
+      # - name: Upload build artifact
+      #   uses: actions/upload-artifact@v4
+      #   with:
+      #     name: orion-linux-x64
+      #     path: vscodium/VSCode-linux-x64/
+      #     retention-days: 7
