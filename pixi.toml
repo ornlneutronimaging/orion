@@ -1,0 +1,12 @@
+[workspace]
+authors = ["Chen Zhang <chenzhang8722@gmail.com>"]
+channels = ["conda-forge"]
+name = "orion"
+platforms = ["osx-arm64"]
+version = "0.1.0"
+
+[tasks]
+
+[dependencies]
+nodejs = "22.*"   # VSCode expects Node 22.x
+python = "3.11.*" # Stable Python version (3.14 is too new)

@@ -198,3 +198,6 @@ vscode/
 # Downloaded extensions for bundling
 extensions/*.vsix
 extensions/**/extension/
+# pixi environments
+.pixi/*
+!.pixi/config.toml
