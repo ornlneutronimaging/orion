@@ -25,6 +25,27 @@ Bundle Electron → Package → (Optional) Sign → Publish
 
 ---
 
+## Architectural Decision: System Tools vs Pixi in CI
+
+**Decision:** Use system-level Node.js/Python in CI, not pixi.
+
+**Rationale:**
+We're adapting an industry-standard application (VSCode) for research purposes. Given limited resources compared to Microsoft, we prioritize:
+
+1. **Following industry best practices** - VSCodium and VSCode use system tools in CI
+2. **Speed over perfect consistency** - System tools are 3-5 minutes faster per build
+3. **Lower complexity** - Fewer layers to debug when CI breaks
+4. **Standard patterns** - Easier for future contributors to understand
+
+**Trade-off accepted:**
+- Local dev uses pixi (reproducibility, easy onboarding)
+- CI uses system tools (speed, industry standard)
+- Both explicitly pin versions (Node 22.x, Python 3.11) - no drift
+
+**Reference:** https://github.com/VSCodium/vscodium/blob/master/.github/workflows/stable.yml
+
+---
+
 ## Our CI/CD Strategy
 
 ### Phase 1: Basic CI (Current)
