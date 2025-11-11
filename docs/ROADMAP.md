@@ -42,10 +42,10 @@ pixi run run-vscode
 ```
 
 #### Day 3-4: Project Infrastructure
-- [ ] Create GitHub repository (ornl/orion)
-- [ ] Set up CI/CD pipeline (GitHub Actions)
-- [ ] Configure branch protection
-- [ ] Create project documentation structure
+- [x] Create GitHub repository (ornl/orion)
+- [x] Set up CI/CD pipeline (GitHub Actions)
+- [x] Configure branch protection
+- [x] Create project documentation structure
 - [ ] Set up issue templates
 
 #### Day 5: Branding Basics
