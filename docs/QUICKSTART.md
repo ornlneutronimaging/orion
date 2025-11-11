@@ -1,252 +1,554 @@
-# Orion Studio Quick Start Guide
+# Quick Start Guide - Orion Studio Development
 
-Welcome to Orion Studio! This guide will help you get started with your custom IDE for neutron imaging.
+## Get Started Today
 
-## Prerequisites
+This guide will get you from zero to a working VSCode fork build in ~2 hours.
 
-Before installing Orion Studio, ensure you have:
+---
 
-- **Operating System**: Windows 10+, macOS 10.15+, or Linux (Ubuntu 20.04+, Fedora 33+)
-- **Memory**: 4GB RAM minimum (8GB recommended)
-- **Disk Space**: 500MB for installation, plus space for data and environments
-- **Python**: Python 3.8+ (optional, can be managed by pixi)
+## Prerequisites Check
 
-## Installation
-
-### Windows
-
-1. Download the installer from the releases page
-2. Run `OrionStudio-Setup-x.y.z.exe`
-3. Follow the installation wizard
-4. Launch Orion Studio from the Start Menu
-
-### macOS
-
-1. Download the `.dmg` file from the releases page
-2. Open the `.dmg` file
-3. Drag Orion Studio to Applications
-4. Launch from Applications folder
-
-**Note**: On first launch, you may need to allow the app in System Preferences > Security & Privacy
-
-### Linux
-
-#### Debian/Ubuntu
 ```bash
-# Download the .deb package
-wget https://github.com/ornlneutronimaging/orion/releases/download/vX.Y.Z/orion-studio_x.y.z_amd64.deb
+# Check Node.js (need 18.x or higher)
+node --version  # Should be v18.x.x or higher
 
-# Install
-sudo dpkg -i orion-studio_x.y.z_amd64.deb
+# Check Python
+python3 --version  # Should be 3.8+
 
-# Install dependencies if needed
-sudo apt-get install -f
+# Check build tools
+gcc --version
+make --version
+git --version
 ```
 
-#### Red Hat/Fedora
+### Install Missing Dependencies
+
+**Ubuntu/Debian:**
 ```bash
-# Download the .rpm package
-wget https://github.com/ornlneutronimaging/orion/releases/download/vX.Y.Z/orion-studio-x.y.z.x86_64.rpm
+sudo apt-get update
+sudo apt-get install -y \
+  build-essential \
+  g++ \
+  libx11-dev \
+  libxkbfile-dev \
+  libsecret-1-dev \
+  python3 \
+  git \
+  curl
 
-# Install
-sudo rpm -i orion-studio-x.y.z.x86_64.rpm
+# Install Node.js 18
+curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
+sudo apt-get install -y nodejs
+
+# Install Yarn
+sudo npm install -g yarn
 ```
 
-## First Launch
+**RHEL/CentOS:**
+```bash
+sudo yum groupinstall -y "Development Tools"
+sudo yum install -y \
+  libX11-devel \
+  libxkbfile-devel \
+  libsecret-devel \
+  python3 \
+  git
 
-### Initial Setup Wizard
+# Install Node.js 18
+curl -fsSL https://rpm.nodesource.com/setup_18.x | sudo bash -
+sudo yum install -y nodejs
 
-On first launch, you'll be greeted with a setup wizard:
-
-1. **Welcome Screen**: Overview of Orion Studio
-2. **Theme Selection**: Choose your preferred color theme
-3. **Extension Installation**: Recommended extensions for neutron imaging
-4. **Pixi Setup**: Configure Python environment management (optional)
-5. **Beamline Connection**: Configure MARS/VENUS access (optional)
-
-### Recommended Extensions
-
-The following extensions are recommended for neutron imaging workflows:
-
-- **Neutron Imaging Tools**: Core data analysis utilities
-- **Jupyter Notebooks**: Interactive notebook support
-- **Python**: Python language support
-- **Pixi Environment Manager**: Environment management
-- **Data Visualization**: Advanced plotting and imaging
-
-## Basic Usage
-
-### Opening a Project
-
-1. **File > Open Folder**: Select your analysis project directory
-2. Or use `Ctrl+K Ctrl+O` (Windows/Linux) or `Cmd+K Cmd+O` (macOS)
-
-### Creating a Jupyter Notebook
-
-1. **File > New File** or `Ctrl+N` / `Cmd+N`
-2. Select **Jupyter Notebook** from the file type menu
-3. Choose your Python kernel (or create a new pixi environment)
-4. Start analyzing!
-
-### Working with Neutron Data
-
-```python
-# Example: Loading and visualizing neutron radiography data
-import numpy as np
-import matplotlib.pyplot as plt
-from neutron_imaging import load_fits
-
-# Load data
-data = load_fits('path/to/neutron_image.fits')
-
-# Display
-plt.imshow(data, cmap='gray')
-plt.colorbar()
-plt.title('Neutron Radiograph')
-plt.show()
+# Install Yarn
+sudo npm install -g yarn
 ```
 
-### Environment Management with Pixi
+---
 
-#### Create a New Environment
+## Step 1: Clone VSCodium (15 minutes)
 
-1. Open Command Palette: `Ctrl+Shift+P` / `Cmd+Shift+P`
-2. Type "Pixi: Create Environment"
-3. Enter environment name
-4. Select packages to install
+```bash
+# Choose a workspace (needs ~10GB space)
+cd ~/projects
+mkdir orion
+cd orion
 
-#### Switch Environments
+# Clone VSCodium
+git clone https://github.com/VSCodium/vscodium.git
+cd vscodium
 
-1. Click the environment indicator in the status bar
-2. Select the desired environment from the list
-3. The Jupyter kernel will automatically update
+# This will download the VSCode source
+./get_repo.sh
+```
 
-## Connecting to MARS/VENUS Beamlines
+**What's happening:**
+- VSCodium is a build script wrapper around VSCode source
+- `get_repo.sh` clones the actual Microsoft VSCode repository
+- You'll see a new `vscode/` directory appear
 
-### MARS (HFIR) Connection
+**Troubleshooting:**
+- If `get_repo.sh` fails, check internet connection
+- If git clone is slow, try: `git clone --depth 1 https://github.com/VSCodium/vscodium.git`
 
-1. **Settings > Beamlines > MARS**
-2. Enter your credentials
-3. Configure data path
-4. Test connection
+---
 
-### VENUS (SNS) Connection
+## Step 2: First Build (30-60 minutes)
 
-1. **Settings > Beamlines > VENUS**
-2. Enter your credentials
-3. Configure data path
-4. Test connection
+```bash
+cd vscode
 
-## Common Workflows
+# Install dependencies (this takes 15-30 minutes)
+yarn install
 
-### Radiography Analysis
+# Build (this takes 20-40 minutes)
+yarn gulp vscode-linux-x64-min
 
-1. Open your data directory
-2. Create a new Jupyter notebook
-3. Load flat-field and dark-current images
-4. Process radiographs
-5. Export results
+# The 'min' suffix means faster build for development
+# Production builds use 'vscode-linux-x64' (slower but optimized)
+```
 
-### Tomography Reconstruction
+**Grab coffee ☕** - This will take a while on first build.
 
-1. Import sinogram data
-2. Configure reconstruction parameters
-3. Preview reconstruction
-4. Run full reconstruction
-5. Visualize 3D volume
+**What's building:**
+- TypeScript → JavaScript compilation
+- Electron bundling
+- Node native modules
+- Monaco editor
+- All built-in extensions
 
-### Batch Processing
+**Troubleshooting:**
+- Out of memory? Close other apps or add swap space
+- Build fails with node-gyp error? Install python2 (some modules need it)
+- Errors about missing packages? Re-run `yarn install`
 
-1. Use the File Explorer to select multiple files
-2. Right-click and select "Batch Process"
-3. Choose processing workflow
-4. Monitor progress
-5. Review results
+---
 
-## Keyboard Shortcuts
+## Step 3: Test Run (5 minutes)
 
-### General
-- `Ctrl/Cmd + P`: Quick file open
-- `Ctrl/Cmd + Shift + P`: Command palette
-- `Ctrl/Cmd + B`: Toggle sidebar
-- `Ctrl/Cmd + J`: Toggle terminal
+```bash
+# From vscode/ directory
+./scripts/code.sh
 
-### Notebooks
-- `Shift + Enter`: Run cell and select next
-- `Ctrl/Cmd + Enter`: Run cell
-- `Alt/Option + Enter`: Run cell and insert below
-- `A`: Insert cell above
-- `B`: Insert cell below
-- `DD`: Delete cell
+# Or directly:
+../VSCode-linux-x64/bin/code-oss
+```
 
-### Editing
-- `Ctrl/Cmd + /`: Toggle comment
-- `Alt/Option + Up/Down`: Move line up/down
-- `Shift + Alt/Option + Up/Down`: Copy line up/down
+**Success looks like:**
+- Application window opens
+- Title bar says "Code - OSS"
+- You can create/open files
+- Extensions panel works
+
+**Test checklist:**
+- [ ] Application launches
+- [ ] Can open a folder
+- [ ] Can create a new file
+- [ ] File → Preferences works
+- [ ] Terminal panel works (Ctrl+`)
+
+---
+
+## Step 4: Basic Branding (15 minutes)
+
+Let's change the name from "Code - OSS" to "Neutron Studio"
+
+```bash
+cd vscode
+
+# Edit product.json
+nano product.json
+```
+
+**Find and change these fields:**
+
+```json
+{
+  "nameShort": "Neutron Studio",
+  "nameLong": "Orion Studio",
+  "applicationName": "orion",
+  "dataFolderName": ".orion",
+  "productDescription": "IDE for Neutron Imaging Notebooks"
+}
+```
+
+**Rebuild:**
+```bash
+# Clean old build
+rm -rf ../VSCode-linux-x64
+
+# Rebuild (faster this time, ~10 minutes)
+yarn gulp vscode-linux-x64-min
+
+# Test
+./scripts/code.sh
+```
+
+**You should see:**
+- Window title: "Neutron Studio"
+- About dialog shows "Orion Studio"
+
+---
+
+## Step 5: Create Development Branch (5 minutes)
+
+```bash
+cd vscode
+git checkout -b ornl/orion-dev
+
+# Commit your changes
+git add product.json
+git commit -m "Initial branding: Orion Studio"
+
+# Create remote repository (on GitHub)
+# Then push:
+git remote add ornl git@github.com:ORNL/orion.git
+git push -u ornl ornl/orion-dev
+```
+
+---
+
+## Step 6: Development Workflow
+
+### Make Changes
+
+```bash
+cd vscode/src/vs/
+
+# Example: Add a console log to test
+echo "console.log('Hello from Orion Studio!');" >> code/electron-main/main.ts
+
+# Rebuild just the changed files (incremental build)
+yarn watch  # This runs in background, auto-rebuilds on changes
+```
+
+### Test Changes
+
+```bash
+# In another terminal
+cd vscode
+./scripts/code.sh
+```
+
+Check the console output - you should see your log message!
+
+### Debug with Chrome DevTools
+
+```bash
+# Launch with debugging enabled
+./scripts/code.sh --inspect-brk=5874
+
+# Open Chrome at: chrome://inspect
+# Click "Open dedicated DevTools for Node"
+```
+
+---
+
+## Step 7: Add Your First Custom Feature (20 minutes)
+
+Let's add a simple "Hello Orion" command.
+
+### Create Custom Directory Structure
+
+```bash
+cd vscode/src/vs
+mkdir -p neutron/browser/commands
+```
+
+### Create Hello Command
+
+```bash
+nano neutron/browser/commands/helloCommand.ts
+```
+
+```typescript
+import { localize } from 'vs/nls';
+import { Action } from 'vs/base/common/actions';
+import { INotificationService } from 'vs/platform/notification/common/notification';
+
+export class HelloOrionAction extends Action {
+  static readonly ID = 'neutron.helloWorld';
+  static readonly LABEL = localize('orionHello', "Hello Orion");
+
+  constructor(
+    id: string,
+    label: string,
+    @INotificationService private readonly notificationService: INotificationService
+  ) {
+    super(id, label);
+  }
+
+  async run(): Promise<void> {
+    this.notificationService.info('Hello from Orion Studio! 🎉');
+  }
+}
+```
+
+### Register Command
+
+```bash
+nano neutron/browser/neutron.contribution.ts
+```
+
+```typescript
+import { Registry } from 'vs/platform/registry/common/platform';
+import { IWorkbenchActionRegistry, Extensions as ActionExtensions } from 'vs/workbench/common/actions';
+import { SyncActionDescriptor } from 'vs/platform/actions/common/actions';
+import { HelloOrionAction } from './commands/helloCommand';
+
+const registry = Registry.as<IWorkbenchActionRegistry>(ActionExtensions.WorkbenchActions);
+
+registry.registerWorkbenchAction(
+  SyncActionDescriptor.from(HelloOrionAction),
+  'Neutron: Hello World'
+);
+```
+
+### Wire It Up
+
+```bash
+# Edit workbench.desktop.main.ts to import our contribution
+nano ../workbench/workbench.desktop.main.ts
+```
+
+Add at the end of imports:
+```typescript
+import 'vs/neutron/browser/neutron.contribution';
+```
+
+### Build and Test
+
+```bash
+cd vscode
+yarn gulp vscode-linux-x64-min
+./scripts/code.sh
+
+# In the app:
+# Press Ctrl+Shift+P (Command Palette)
+# Type "Hello Orion"
+# Press Enter
+```
+
+**You should see:** Notification saying "Hello from Orion Studio! 🎉"
+
+**Congratulations! 🎉** You just added a custom feature to VSCode!
+
+---
+
+## Step 8: Bundle Jupyter Extension (15 minutes)
+
+```bash
+cd vscodium
+mkdir -p extensions
+
+# Download Jupyter extension
+cd extensions
+wget "https://marketplace.visualstudio.com/_apis/public/gallery/publishers/ms-toolsai/vsextensions/jupyter/latest/vspackage" -O jupyter.vsix
+
+# Extract
+unzip jupyter.vsix -d ms-toolsai.jupyter
+
+# Build with extension included
+cd ../vscode
+yarn gulp vscode-linux-x64-min
+```
+
+### Test Jupyter
+
+```bash
+./scripts/code.sh
+
+# Create test.ipynb
+# Open it - Jupyter interface should load
+# Select Python kernel
+# Create cell with: print("Hello from Orion!")
+# Run cell
+```
+
+---
+
+## Development Tips
+
+### Fast Iteration
+```bash
+# Terminal 1: Watch mode (auto-rebuild on changes)
+yarn watch
+
+# Terminal 2: Test
+./scripts/code.sh
+
+# Make changes → Save → Reload window (Ctrl+R in app)
+```
+
+### Debug Logging
+```typescript
+// Add anywhere in your code
+console.log('DEBUG:', variableName);
+
+// View in:
+# Help → Toggle Developer Tools → Console
+```
+
+### TypeScript Compilation Errors
+```bash
+# Check for errors
+yarn compile
+
+# Or specific file
+yarn tsc --noEmit src/vs/neutron/browser/commands/helloCommand.ts
+```
+
+### Clean Build
+```bash
+# If things get weird, clean and rebuild
+git clean -xfd  # WARNING: Deletes all untracked files
+yarn install
+yarn gulp vscode-linux-x64-min
+```
+
+---
+
+## Common Issues & Solutions
+
+### "Cannot find module"
+**Problem:** Import path wrong or module not compiled
+**Solution:**
+```bash
+yarn compile
+# Check import path matches file location
+```
+
+### "Port already in use"
+**Problem:** Old instance still running
+**Solution:**
+```bash
+killall code-oss
+./scripts/code.sh
+```
+
+### Build fails with memory error
+**Problem:** Not enough RAM (need 8GB+)
+**Solution:**
+```bash
+# Add swap space
+sudo fallocate -l 8G /swapfile
+sudo chmod 600 /swapfile
+sudo mkswap /swapfile
+sudo swapon /swapfile
+
+# Or: Close other apps and try again
+```
+
+### Changes not appearing
+**Problem:** Cached build
+**Solution:**
+```bash
+# Rebuild the specific module
+yarn gulp compile-build
+
+# Or force clean rebuild
+rm -rf out
+yarn gulp vscode-linux-x64-min
+```
+
+---
+
+## Next Steps
+
+Now that you have a working development environment:
+
+1. **Read ARCHITECTURE.md** - Understand the project structure
+2. **Read ROADMAP.md** - See the 8-week development plan
+3. **Set up Git workflow** - Create feature branches
+4. **Join development channel** - Coordinate with team
+5. **Start Phase 1** - Implement GitService and PixiService
+
+---
+
+## Useful Commands Reference
+
+```bash
+# Development build (fast)
+yarn gulp vscode-linux-x64-min
+
+# Production build (optimized, slow)
+yarn gulp vscode-linux-x64
+
+# Watch mode (auto-rebuild)
+yarn watch
+
+# Compile TypeScript only
+yarn compile
+
+# Run tests
+yarn test
+
+# Package as AppImage
+./scripts/package-appimage.sh
+
+# Clean everything
+git clean -xfd && yarn install
+```
+
+---
+
+## Resources
+
+- **VSCodium Docs:** https://github.com/VSCodium/vscodium/blob/master/docs/index.md
+- **VSCode Source:** https://github.com/microsoft/vscode
+- **VSCode Extension API:** https://code.visualstudio.com/api
+- **VSCode Dev Docs:** https://github.com/microsoft/vscode/wiki
+- **Electron Docs:** https://www.electronjs.org/docs
+
+---
 
 ## Getting Help
 
 ### Documentation
-- Access built-in docs: `Help > Documentation`
-- Online docs: https://ornlneutronimaging.github.io/orion
+- Check ARCHITECTURE.md for design decisions
+- Check ROADMAP.md for implementation plan
+- Check VSCode wiki: https://github.com/microsoft/vscode/wiki
 
-### Support
-- GitHub Issues: https://github.com/ornlneutronimaging/orion/issues
-- Community Forum: [Coming Soon]
-- Email: orion-support@ornl.gov [Configure as needed]
+### AI Assistant
+- Use Claude AI for code questions
+- Paste error messages for debugging help
+- Ask for code examples
 
-### Tutorials
-- `Help > Tutorials`: Interactive walkthrough
-- Example workflows in `examples/` folder
-- Video tutorials: [Coming Soon]
-
-## Tips and Tricks
-
-### Performance
-- Close unused notebooks to free memory
-- Use data streaming for large datasets
-- Enable hardware acceleration in settings
-
-### Customization
-- Explore themes: `File > Preferences > Color Theme`
-- Customize keyboard shortcuts: `File > Preferences > Keyboard Shortcuts`
-- Configure settings: `File > Preferences > Settings`
-
-### Collaboration
-- Use Git integration for version control
-- Share environments with pixi.toml files
-- Export notebooks as HTML/PDF for sharing
-
-## Troubleshooting
-
-### Orion Studio won't start
-- Check system requirements
-- Review error logs in `~/.orion/logs`
-- Try running from command line for detailed errors
-
-### Jupyter kernel won't connect
-- Verify Python installation
-- Check pixi environment activation
-- Restart the kernel: `Ctrl+Shift+P` > "Restart Kernel"
-
-### Extensions not loading
-- Check extension compatibility
-- Update to latest version
-- Disable conflicting extensions
-
-### Beamline connection issues
-- Verify network connectivity
-- Check credentials
-- Ensure VPN is connected (if required)
-
-## Next Steps
-
-- Read the [Architecture Guide](ARCHITECTURE.md) to understand system design
-- Check the [Roadmap](ROADMAP.md) for upcoming features
-- Join the community and contribute!
+### Community
+- VSCodium Gitter: https://gitter.im/VSCodium/Lobby
+- VSCode GitHub Discussions
+- Stack Overflow (tag: vscode)
 
 ---
 
-**Need more help?** Check our comprehensive documentation or reach out to the community.
+## Success Checklist
 
-**Ready to contribute?** See `CONTRIBUTING.md` for guidelines (coming soon).
+After following this guide, you should have:
+
+- [x] VSCode building successfully
+- [x] Custom branding (Neutron Studio)
+- [x] Development workflow set up
+- [x] First custom command working
+- [x] Jupyter extension bundled
+- [x] Understanding of code structure
+
+**Ready to build features!** 🚀
+
+---
+
+## Time Investment Summary
+
+| Task | Time | Cumulative |
+|------|------|------------|
+| Install dependencies | 15 min | 15 min |
+| Clone & setup | 15 min | 30 min |
+| First build | 45 min | 1h 15min |
+| Test run | 5 min | 1h 20min |
+| Basic branding | 15 min | 1h 35min |
+| Git setup | 5 min | 1h 40min |
+| First custom feature | 20 min | 2h |
+| Bundle Jupyter | 15 min | **2h 15min** |
+
+**Total: ~2 hours** to go from nothing to custom features!
+
+---
+
+**Questions?** Start with the architecture document, then dive into the roadmap. You've got this! 💪
