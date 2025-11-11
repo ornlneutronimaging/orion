@@ -11,11 +11,11 @@
 ### Tasks
 
 #### Day 1-2: Environment Setup
-- [ ] Install build dependencies (Node.js 22.x, Python 3.11, build-essential)
-- [ ] Clone VSCodium repository
-- [ ] Successful development build
-- [ ] Test that it runs
-- [ ] Document build process
+- [x] Install build dependencies (Node.js 22.x, Python 3.11, build-essential)
+- [x] Clone VSCodium repository
+- [x] Successful development build
+- [x] Test that it runs
+- [x] Document build process
 
 ```bash
 # Example setup
