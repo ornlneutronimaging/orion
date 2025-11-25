@@ -1,0 +1,16 @@
+{
+    "workbench.startupEditor": "none",
+    "workbench.iconTheme": "vs-seti",
+    "security.workspace.trust.enabled": false,
+    "telemetry.telemetryLevel": "off",
+    "update.mode": "manual",
+    "extensions.autoUpdate": false,
+    "window.title": "Orion Studio",
+    "remote.SSH.showLoginTerminal": true,
+    "remote.SSH.useLocalServer": false,
+    "workbench.activityBar.visible": false,
+    "workbench.statusBar.visible": true,
+    "window.menuBarVisibility": "compact",
+    "jupyter.askForKernelRestart": false,
+    "http.proxyStrictSSL": false
+}

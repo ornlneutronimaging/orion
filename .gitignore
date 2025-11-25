@@ -201,3 +201,7 @@ extensions/**/extension/
 # pixi environments
 .pixi/*
 !.pixi/config.toml
+
+# Orion Studio Build Artifacts
+build/
+dist/
