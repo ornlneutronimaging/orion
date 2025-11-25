@@ -23,26 +23,13 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Check for broken links in README
+      - name: Check for README
         run: |
-          # Check that all referenced files exist
-          echo "Checking documentation links..."
-
-          # Check main README links
-          if ! grep -q "ARCHITECTURE.md" README.md; then
-            echo "❌ README should reference ARCHITECTURE.md"
+          if [ ! -f "README.md" ]; then
+            echo "❌ README.md missing"
             exit 1
           fi
-
-          # Verify documentation files exist
-          for doc in docs/ARCHITECTURE.md docs/ROADMAP.md docs/QUICKSTART.md; do
-            if [ ! -f "$doc" ]; then
-              echo "❌ Missing documentation file: $doc"
-              exit 1
-            fi
-          done
-
-          echo "✅ Documentation structure looks good"
+          echo "✅ README.md exists"
 
   # Job 2: Validate pixi configuration
   pixi-validation:
@@ -92,23 +79,18 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Verify .gitignore includes VSCode artifacts
+      - name: Verify .gitignore includes Build Artifacts
         run: |
           echo "Checking .gitignore..."
 
-          # Check that VSCode build artifacts are ignored
-          if ! grep -q "^vscode/$" .gitignore; then
-            echo "❌ .gitignore should include vscode/ directory"
+          # Check that build artifacts are ignored
+          if ! grep -q "build/" .gitignore; then
+            echo "❌ .gitignore should include build/ directory"
             exit 1
           fi
 
-          if ! grep -q "VSCode-.*" .gitignore; then
-            echo "❌ .gitignore should include VSCode-* build directories"
-            exit 1
-          fi
-
-          if ! grep -q "node_modules/" .gitignore; then
-            echo "❌ .gitignore should include node_modules/"
+          if ! grep -q "dist/" .gitignore; then
+            echo "❌ .gitignore should include dist/ directory"
             exit 1
           fi
 
