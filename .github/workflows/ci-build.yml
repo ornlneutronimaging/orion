@@ -13,8 +13,11 @@ concurrency:
 
 jobs:
   build:
-    name: Build Orion Studio
-    runs-on: ubuntu-latest
+    name: Build Orion Studio (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest]
     timeout-minutes: 30
 
     steps:
@@ -26,10 +29,14 @@ jobs:
         with:
           python-version: '3.11'
 
+      - name: Install Linux Dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libnss3 libatk1.0-0 libatk-bridge2.0-0 libgdk-pixbuf2.0-0 libgtk-3-0 libgbm1 libasound2
+
       - name: Install dependencies
         run: |
-          # The build script uses standard libraries, but we might need 'requests' if we switch to it later.
-          # For now, just ensure we have a clean python env.
           python3 --version
 
       - name: Run Build Script
@@ -49,6 +56,6 @@ jobs:
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: orion-studio-linux
+          name: orion-studio-${{ matrix.os }}
           path: dist/OrionStudio/
           retention-days: 5
