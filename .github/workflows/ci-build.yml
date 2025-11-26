@@ -71,9 +71,9 @@ jobs:
         run: |
           cd dist
           if [ "${{ matrix.os }}" == "macos-latest" ]; then
-            tar -czf OrionStudio-${{ matrix.os }}.tar.gz "Orion Studio.app"
+            GZIP=-9 tar -czf OrionStudio-${{ matrix.os }}.tar.gz "Orion Studio.app"
           else
-            tar -czf OrionStudio-${{ matrix.os }}.tar.gz OrionStudio/
+            GZIP=-9 tar -czf OrionStudio-${{ matrix.os }}.tar.gz OrionStudio/
           fi
           echo "✅ Compression complete: dist/OrionStudio-${{ matrix.os }}.tar.gz"
 
