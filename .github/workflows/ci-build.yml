@@ -46,19 +46,30 @@ jobs:
 
       - name: Verify Build Output
         run: |
-          if [ -d "dist/OrionStudio" ]; then
-            echo "✅ Build successful: dist/OrionStudio exists"
-            ls -R dist/OrionStudio
+          if [ "${{ matrix.os }}" == "macos-latest" ]; then
+            if [ -d "dist/Orion Studio.app" ]; then
+               echo "✅ Build successful: dist/Orion Studio.app exists"
+            else
+               echo "❌ Build failed: dist/Orion Studio.app not found"
+               exit 1
+            fi
           else
-            echo "❌ Build failed: dist/OrionStudio not found"
-            exit 1
+            if [ -d "dist/OrionStudio" ]; then
+              echo "✅ Build successful: dist/OrionStudio exists"
+            else
+              echo "❌ Build failed: dist/OrionStudio not found"
+              exit 1
+            fi
           fi
 
       - name: Compress Build Output
         run: |
           cd dist
-          # Create a tar.gz to preserve permissions and symlinks exactly as they are
-          tar -czf OrionStudio-${{ matrix.os }}.tar.gz OrionStudio/
+          if [ "${{ matrix.os }}" == "macos-latest" ]; then
+            tar -czf OrionStudio-${{ matrix.os }}.tar.gz "Orion Studio.app"
+          else
+            tar -czf OrionStudio-${{ matrix.os }}.tar.gz OrionStudio/
+          fi
           echo "✅ Compression complete: dist/OrionStudio-${{ matrix.os }}.tar.gz"
 
       - name: Upload Artifact

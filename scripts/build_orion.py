@@ -168,34 +168,111 @@ def main():
     os.makedirs(extract_dir)
     extract_file(download_path, extract_dir)
 
-    # Setup Portable
-    orion_dir = os.path.join(DIST_DIR, APP_NAME)
-    os.makedirs(orion_dir)
-    
     system = platform.system()
     if system == "Darwin":
+        # Create the Wrapper App Structure
+        wrapper_app = os.path.join(DIST_DIR, "Orion Studio.app")
+        contents_dir = os.path.join(wrapper_app, "Contents")
+        macos_dir = os.path.join(contents_dir, "MacOS")
+        resources_dir = os.path.join(contents_dir, "Resources")
+        
+        if os.path.exists(wrapper_app):
+            shutil.rmtree(wrapper_app)
+            
+        os.makedirs(macos_dir)
+        os.makedirs(resources_dir)
+        
+        # 1. Install the Launcher Script
+        launcher_src = os.path.join(os.path.dirname(__file__), "launch_orion.sh")
+        launcher_dest = os.path.join(macos_dir, "OrionStudio") # Main executable name
+        shutil.copy(launcher_src, launcher_dest)
+        os.chmod(launcher_dest, 0o755)
+        
+        # 2. Create Info.plist for the Wrapper
+        info_plist_content = """<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>CFBundleExecutable</key>
+    <string>OrionStudio</string>
+    <key>CFBundleIconFile</key>
+    <string>AppIcon</string>
+    <key>CFBundleIdentifier</key>
+    <string>gov.ornl.neutron.orionstudio</string>
+    <key>CFBundleInfoDictionaryVersion</key>
+    <string>6.0</string>
+    <key>CFBundleName</key>
+    <string>Orion Studio</string>
+    <key>CFBundlePackageType</key>
+    <string>APPL</string>
+    <key>CFBundleShortVersionString</key>
+    <string>1.0</string>
+    <key>CFBundleVersion</key>
+    <string>1</string>
+    <key>LSMinimumSystemVersion</key>
+    <string>10.13</string>
+    <key>NSHighResolutionCapable</key>
+    <true/>
+</dict>
+</plist>"""
+        with open(os.path.join(contents_dir, "Info.plist"), "w") as f:
+            f.write(info_plist_content)
+
+        # 3. Move VS Code to Resources (Embedded)
         # Find Visual Studio Code.app in extract_dir
-        app_path = None
+        vscode_src = None
         for root, dirs, files in os.walk(extract_dir):
             for d in dirs:
                 if d == "Visual Studio Code.app":
-                    app_path = os.path.join(root, d)
+                    vscode_src = os.path.join(root, d)
                     break
-            if app_path:
+            if vscode_src:
                 break
         
-        if not app_path:
+        if not vscode_src:
             print(f"Error: Could not find Visual Studio Code.app in {extract_dir}")
             return
 
-        dest_app = os.path.join(orion_dir, "Visual Studio Code.app")
-        print(f"Moving {app_path} to {dest_app}...")
-        shutil.move(app_path, dest_app)
+        vscode_dest = os.path.join(resources_dir, "Visual Studio Code.app")
+        print(f"Embedding {vscode_src} into {vscode_dest}...")
+        shutil.move(vscode_src, vscode_dest)
         
-        # Clear quarantine to prevent "App is damaged" error
-        clear_quarantine(dest_app)
+        # Clear quarantine on the embedded app
+        clear_quarantine(vscode_dest)
         
+        # 4. Setup Portable Mode (inside the embedded app)
+        # For macOS, 'code-portable-data' goes alongside the binary's app bundle, 
+        # BUT since we are embedding it, we need to be careful.
+        # VS Code looks for 'code-portable-data' sibling to 'Visual Studio Code.app' OR inside it.
+        # Let's put it inside the embedded app's Contents/Resources/app/ to be safe? 
+        # Actually, standard portable mode for macOS is sibling to the .app.
+        # So we put 'code-portable-data' in Orion Studio.app/Contents/Resources/
+        
+        data_dir = os.path.join(resources_dir, "code-portable-data")
+        os.makedirs(data_dir, exist_ok=True)
+        
+        # Create User/settings.json
+        user_data_dir = os.path.join(data_dir, "user-data", "User")
+        os.makedirs(user_data_dir, exist_ok=True)
+        
+        settings_src = os.path.join(CONFIG_DIR, "settings.json")
+        settings_dest = os.path.join(user_data_dir, "settings.json")
+        
+        if os.path.exists(settings_src):
+            print(f"Copying settings from {settings_src}...")
+            shutil.copy(settings_src, settings_dest)
+
+        # 5. Install Extensions
+        # We need to point install_extensions to the EMBEDDED app
+        # install_extensions expects the PARENT directory of "Visual Studio Code.app"
+        install_extensions(resources_dir, data_dir)
+        
+        print(f"Build complete! Orion Studio.app is located at: {wrapper_app}")
+        return # End of macOS build
+
     elif system == "Linux":
+        # Setup Portable
+        orion_dir = os.path.join(DIST_DIR, APP_NAME)
         # Find the inner folder
         contents = os.listdir(extract_dir)
         vscode_dir = next((d for d in contents if "VSCode" in d), None)

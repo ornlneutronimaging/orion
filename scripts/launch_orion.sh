@@ -3,7 +3,19 @@
 # Configuration
 NOTEBOOK_REPO="https://github.com/neutronimaging/python_notebooks"
 DEFAULT_CLONE_DIR="$HOME/NeutronNotebooks"
-APP_PATH="$(dirname "$0")/../dist/OrionStudio/Visual Studio Code.app/Contents/Resources/app/bin/code"
+
+# Resolve the directory where this script is running
+# When packaged, this script is Orion Studio.app/Contents/MacOS/OrionStudio
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# The embedded VS Code is at ../Resources/Visual Studio Code.app
+APP_PATH="$SCRIPT_DIR/../Resources/Visual Studio Code.app/Contents/Resources/app/bin/code"
+
+# Fallback for development (if running script directly from repo)
+if [ ! -f "$APP_PATH" ]; then
+    # Try local dev path
+    APP_PATH="$(dirname "$0")/../dist/Orion Studio.app/Contents/Resources/Visual Studio Code.app/Contents/Resources/app/bin/code"
+fi
 
 # Detect OS
 OS="$(uname)"
