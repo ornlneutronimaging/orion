@@ -281,6 +281,12 @@ def main():
             # Move contents of src_dir to orion_dir
             for item in os.listdir(src_dir):
                 shutil.move(os.path.join(src_dir, item), orion_dir)
+        
+        # Install Launcher Script for Linux
+        launcher_src = os.path.join(os.path.dirname(__file__), "launch_orion.sh")
+        launcher_dest = os.path.join(orion_dir, "OrionStudio") # No extension for cleaner look
+        shutil.copy(launcher_src, launcher_dest)
+        os.chmod(launcher_dest, 0o755)
 
     # Now setup portable mode in the final location
     data_dir = setup_portable_mode(orion_dir)

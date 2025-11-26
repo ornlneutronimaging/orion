@@ -9,12 +9,21 @@ DEFAULT_CLONE_DIR="$HOME/NeutronNotebooks"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # The embedded VS Code is at ../Resources/Visual Studio Code.app
-APP_PATH="$SCRIPT_DIR/../Resources/Visual Studio Code.app/Contents/Resources/app/bin/code"
+if [ "$OS" == "Darwin" ]; then
+    APP_PATH="$SCRIPT_DIR/../Resources/Visual Studio Code.app/Contents/Resources/app/bin/code"
+else
+    # Linux: Launcher is at root of dist/OrionStudio/
+    # VS Code binary is at bin/code relative to root
+    APP_PATH="$SCRIPT_DIR/bin/code"
+fi
 
 # Fallback for development (if running script directly from repo)
 if [ ! -f "$APP_PATH" ]; then
-    # Try local dev path
-    APP_PATH="$(dirname "$0")/../dist/Orion Studio.app/Contents/Resources/Visual Studio Code.app/Contents/Resources/app/bin/code"
+    if [ "$OS" == "Darwin" ]; then
+        APP_PATH="$(dirname "$0")/../dist/Orion Studio.app/Contents/Resources/Visual Studio Code.app/Contents/Resources/app/bin/code"
+    else
+        APP_PATH="$(dirname "$0")/../dist/OrionStudio/bin/code"
+    fi
 fi
 
 # Detect OS
