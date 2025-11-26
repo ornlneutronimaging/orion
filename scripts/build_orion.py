@@ -173,10 +173,9 @@ def install_extensions(install_dir, data_dir):
                 print(f"Failed to install {ext}: {e}")
 
     elif system == "Linux":
-         contents = os.listdir(install_dir)
-         vscode_dir = next((d for d in contents if "VSCode" in d), None)
-         if vscode_dir:
-             code_executable = os.path.join(install_dir, vscode_dir, "bin", "code")
+         # In main(), we moved the contents of VSCode-linux-x64 into install_dir (dist/OrionStudio)
+         # So bin/code should be directly inside install_dir
+         code_executable = os.path.join(install_dir, "bin", "code")
 
          if not os.path.exists(code_executable):
             print(f"Error: Could not find code executable at {code_executable}")
