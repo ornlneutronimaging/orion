@@ -54,9 +54,16 @@ jobs:
             exit 1
           fi
 
+      - name: Compress Build Output
+        run: |
+          cd dist
+          # Create a tar.gz to preserve permissions and symlinks exactly as they are
+          tar -czf OrionStudio-${{ matrix.os }}.tar.gz OrionStudio/
+          echo "✅ Compression complete: dist/OrionStudio-${{ matrix.os }}.tar.gz"
+
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: orion-studio-${{ matrix.os }}
-          path: dist/OrionStudio/
+          name: OrionStudio-${{ matrix.os }}
+          path: dist/OrionStudio-${{ matrix.os }}.tar.gz
           retention-days: 5
