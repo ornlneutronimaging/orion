@@ -113,33 +113,52 @@ def install_extensions(install_dir, data_dir):
     
     if system == "Darwin":
         # Path inside the app bundle
-        code_executable = os.path.join(install_dir, "Visual Studio Code.app", "Contents", "Resources", "app", "bin", "code")
+        # Note: We bypass the 'bin/code' shell script because it has a bug when calculating paths 
+        # inside a nested app bundle (it finds the outer Orion Studio.app instead of the inner VS Code.app).
+        # We invoke Electron directly with cli.js.
+        electron_executable = os.path.join(install_dir, "Visual Studio Code.app", "Contents", "MacOS", "Electron")
+        cli_js = os.path.join(install_dir, "Visual Studio Code.app", "Contents", "Resources", "app", "out", "cli.js")
+        
+        if not os.path.exists(electron_executable):
+             print(f"Error: Could not find Electron at {electron_executable}")
+             return
+             
+        # We need to chmod the Electron binary
+        st = os.stat(electron_executable)
+        os.chmod(electron_executable, st.st_mode | stat.S_IEXEC)
+
+        for ext in extensions:
+            print(f"Installing {ext}...")
+            try:
+                env = os.environ.copy()
+                env["NODE_TLS_REJECT_UNAUTHORIZED"] = "0"
+                env["ELECTRON_RUN_AS_NODE"] = "1"
+                subprocess.run([electron_executable, cli_js, "--install-extension", ext, "--force"], check=True, env=env)
+            except subprocess.CalledProcessError as e:
+                print(f"Failed to install {ext}: {e}")
+
     elif system == "Linux":
          contents = os.listdir(install_dir)
          vscode_dir = next((d for d in contents if "VSCode" in d), None)
          if vscode_dir:
              code_executable = os.path.join(install_dir, vscode_dir, "bin", "code")
 
-    if not os.path.exists(code_executable):
-        print(f"Error: Could not find code executable at {code_executable}")
-        return
+         if not os.path.exists(code_executable):
+            print(f"Error: Could not find code executable at {code_executable}")
+            return
 
-    # Ensure executable permissions
-    # We need to chmod the actual binary, not just the shell script if possible, but the shell script is what we call.
-    # Let's chmod the shell script.
-    st = os.stat(code_executable)
-    os.chmod(code_executable, st.st_mode | stat.S_IEXEC)
+         # Ensure executable permissions
+         st = os.stat(code_executable)
+         os.chmod(code_executable, st.st_mode | stat.S_IEXEC)
 
-    for ext in extensions:
-        print(f"Installing {ext}...")
-        try:
-            # We must use the --force flag to ensure it installs even if there are version mismatches or other warnings
-            # Also bypass SSL for corporate proxies
-            env = os.environ.copy()
-            env["NODE_TLS_REJECT_UNAUTHORIZED"] = "0"
-            subprocess.run([code_executable, "--install-extension", ext, "--force"], check=True, env=env)
-        except subprocess.CalledProcessError as e:
-            print(f"Failed to install {ext}: {e}")
+         for ext in extensions:
+            print(f"Installing {ext}...")
+            try:
+                env = os.environ.copy()
+                env["NODE_TLS_REJECT_UNAUTHORIZED"] = "0"
+                subprocess.run([code_executable, "--install-extension", ext, "--force"], check=True, env=env)
+            except subprocess.CalledProcessError as e:
+                print(f"Failed to install {ext}: {e}")
 
 def main():
     # Clean build dir
@@ -273,6 +292,10 @@ def main():
     elif system == "Linux":
         # Setup Portable
         orion_dir = os.path.join(DIST_DIR, APP_NAME)
+        if os.path.exists(orion_dir):
+            shutil.rmtree(orion_dir)
+        os.makedirs(orion_dir)
+        
         # Find the inner folder
         contents = os.listdir(extract_dir)
         vscode_dir = next((d for d in contents if "VSCode" in d), None)

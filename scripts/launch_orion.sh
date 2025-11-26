@@ -9,8 +9,12 @@ DEFAULT_CLONE_DIR="$HOME/NeutronNotebooks"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # The embedded VS Code is at ../Resources/Visual Studio Code.app
+# The embedded VS Code is at ../Resources/Visual Studio Code.app
 if [ "$OS" == "Darwin" ]; then
-    APP_PATH="$SCRIPT_DIR/../Resources/Visual Studio Code.app/Contents/Resources/app/bin/code"
+    # Bypass the 'bin/code' script because it fails in nested bundles.
+    # Use Electron directly.
+    APP_PATH="$SCRIPT_DIR/../Resources/Visual Studio Code.app/Contents/MacOS/Electron"
+    CLI_PATH="$SCRIPT_DIR/../Resources/Visual Studio Code.app/Contents/Resources/app/out/cli.js"
 else
     # Linux: Launcher is at root of dist/OrionStudio/
     # VS Code binary is at bin/code relative to root
@@ -20,7 +24,8 @@ fi
 # Fallback for development (if running script directly from repo)
 if [ ! -f "$APP_PATH" ]; then
     if [ "$OS" == "Darwin" ]; then
-        APP_PATH="$(dirname "$0")/../dist/Orion Studio.app/Contents/Resources/Visual Studio Code.app/Contents/Resources/app/bin/code"
+        APP_PATH="$(dirname "$0")/../dist/Orion Studio.app/Contents/Resources/Visual Studio Code.app/Contents/MacOS/Electron"
+        CLI_PATH="$(dirname "$0")/../dist/Orion Studio.app/Contents/Resources/Visual Studio Code.app/Contents/Resources/app/out/cli.js"
     else
         APP_PATH="$(dirname "$0")/../dist/OrionStudio/bin/code"
     fi
@@ -380,4 +385,9 @@ if [ "$ENABLE_COPILOT" == "FALSE" ]; then
 fi
 
 echo "Launching Orion Studio..."
-"$APP_PATH" "${ARGS[@]}"
+if [ "$OS" == "Darwin" ]; then
+    export ELECTRON_RUN_AS_NODE=1
+    "$APP_PATH" "$CLI_PATH" "${ARGS[@]}"
+else
+    "$APP_PATH" "${ARGS[@]}"
+fi
