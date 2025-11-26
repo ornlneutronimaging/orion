@@ -34,9 +34,6 @@ if [ ! -f "$APP_PATH" ]; then
     fi
 fi
 
-# Detect OS
-OS="$(uname)"
-
 # --- Helper Functions ---
 
 generate_branch_name() {
