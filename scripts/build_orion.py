@@ -100,6 +100,7 @@ def setup_portable_mode(install_dir):
 
 def install_extensions(install_dir, data_dir):
     print("Installing extensions...")
+    system = platform.system()
     extensions_file = os.path.join(CONFIG_DIR, "extensions.txt")
     if not os.path.exists(extensions_file):
         print("No extensions.txt found, skipping.")
@@ -108,9 +109,40 @@ def install_extensions(install_dir, data_dir):
     with open(extensions_file, 'r') as f:
         extensions = [line.strip() for line in f if line.strip() and not line.startswith("#")]
 
-    system = platform.system()
-    code_executable = ""
+    # Install Orion Launcher Extension
+    print("Building Orion Launcher Extension...")
+    ext_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "extensions", "orion-launcher")
     
+    # Install dependencies and compile
+    subprocess.run(["npm", "install"], cwd=ext_dir, check=True)
+    subprocess.run(["npm", "run", "compile"], cwd=ext_dir, check=True)
+    
+    # Copy to extensions directory
+    # For macOS: Orion Studio.app/Contents/Resources/app/extensions/orion-launcher
+    # For Linux: OrionStudio/resources/app/extensions/orion-launcher
+    # WAIT: Standard VS Code extensions go into ~/.vscode/extensions OR we can bundle them.
+    # To bundle them as "built-in", we need to put them in resources/app/extensions.
+    
+    if system == "Darwin":
+        target_ext_dir = os.path.join(install_dir, "Visual Studio Code.app", "Contents", "Resources", "app", "extensions", "orion-launcher")
+    elif system == "Linux":
+         contents = os.listdir(install_dir)
+         vscode_dir = next((d for d in contents if "VSCode" in d), None)
+         if vscode_dir:
+             target_ext_dir = os.path.join(install_dir, vscode_dir, "resources", "app", "extensions", "orion-launcher")
+         else:
+             # Fallback if structure is different
+             target_ext_dir = os.path.join(install_dir, "resources", "app", "extensions", "orion-launcher")
+
+    if os.path.exists(target_ext_dir):
+        shutil.rmtree(target_ext_dir)
+    
+    print(f"Installing Orion Launcher to {target_ext_dir}...")
+    shutil.copytree(ext_dir, target_ext_dir, ignore=shutil.ignore_patterns("node_modules", ".git", ".vscode-test"))
+    
+    # We need to install production dependencies in the target
+    subprocess.run(["npm", "install", "--production"], cwd=target_ext_dir, check=True)
+
     if system == "Darwin":
         # Path inside the app bundle
         # Note: We bypass the 'bin/code' shell script because it has a bug when calculating paths 
@@ -127,13 +159,16 @@ def install_extensions(install_dir, data_dir):
         st = os.stat(electron_executable)
         os.chmod(electron_executable, st.st_mode | stat.S_IEXEC)
 
+        # Define extensions dir inside portable data dir
+        extensions_dir = os.path.join(data_dir, "extensions")
+        
         for ext in extensions:
             print(f"Installing {ext}...")
             try:
                 env = os.environ.copy()
                 env["NODE_TLS_REJECT_UNAUTHORIZED"] = "0"
                 env["ELECTRON_RUN_AS_NODE"] = "1"
-                subprocess.run([electron_executable, cli_js, "--install-extension", ext, "--force"], check=True, env=env)
+                subprocess.run([electron_executable, cli_js, "--install-extension", ext, "--extensions-dir", extensions_dir, "--force"], check=True, env=env)
             except subprocess.CalledProcessError as e:
                 print(f"Failed to install {ext}: {e}")
 
@@ -151,12 +186,15 @@ def install_extensions(install_dir, data_dir):
          st = os.stat(code_executable)
          os.chmod(code_executable, st.st_mode | stat.S_IEXEC)
 
+         # Define extensions dir inside portable data dir
+         extensions_dir = os.path.join(data_dir, "extensions")
+
          for ext in extensions:
             print(f"Installing {ext}...")
             try:
                 env = os.environ.copy()
                 env["NODE_TLS_REJECT_UNAUTHORIZED"] = "0"
-                subprocess.run([code_executable, "--install-extension", ext, "--force"], check=True, env=env)
+                subprocess.run([code_executable, "--install-extension", ext, "--extensions-dir", extensions_dir, "--force"], check=True, env=env)
             except subprocess.CalledProcessError as e:
                 print(f"Failed to install {ext}: {e}")
 

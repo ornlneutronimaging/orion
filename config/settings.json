@@ -4,7 +4,7 @@
     "security.workspace.trust.enabled": false,
     "telemetry.telemetryLevel": "off",
     "update.mode": "manual",
-    "extensions.autoUpdate": false,
+    "extensions.autoUpdate": true,
     "window.title": "Orion Studio",
     "remote.SSH.showLoginTerminal": true,
     "remote.SSH.useLocalServer": false,
