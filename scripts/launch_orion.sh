@@ -8,6 +8,9 @@ DEFAULT_CLONE_DIR="$HOME/NeutronNotebooks"
 # When packaged, this script is Orion Studio.app/Contents/MacOS/OrionStudio
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
+# Detect OS
+OS="$(uname)"
+
 # The embedded VS Code is at ../Resources/Visual Studio Code.app
 # The embedded VS Code is at ../Resources/Visual Studio Code.app
 if [ "$OS" == "Darwin" ]; then
