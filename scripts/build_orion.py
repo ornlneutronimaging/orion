@@ -11,26 +11,51 @@ import ssl
 import stat
 
 # Configuration
-VSCODE_VERSION = "1.95.0"  # Pin a specific version for stability
+# Configuration
 APP_NAME = "OrionStudio"
 CONFIG_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "config")
 BUILD_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "build")
 DIST_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "dist")
 
+def get_latest_version():
+    url = "https://update.code.visualstudio.com/api/releases/stable"
+    print(f"Fetching latest VS Code version from {url}...")
+    try:
+        # Bypass SSL verification for simplicity
+        ctx = ssl.create_default_context()
+        ctx.check_hostname = False
+        ctx.verify_mode = ssl.CERT_NONE
+        
+        with urllib.request.urlopen(url, context=ctx) as response:
+            data = json.loads(response.read().decode())
+            if isinstance(data, list) and len(data) > 0:
+                version = data[0]
+                print(f"Detected latest VS Code version: {version}")
+                return version
+            else:
+                raise Exception("Invalid API response format")
+    except Exception as e:
+        print(f"Failed to fetch latest version: {e}")
+        # Fallback to a known recent version if API fails
+        fallback = "1.106.3"
+        print(f"Falling back to version {fallback}")
+        return fallback
+
 def get_download_url():
+    version = get_latest_version()
     system = platform.system()
     machine = platform.machine()
     
     if system == "Darwin":
         if machine == "arm64":
-            return f"https://update.code.visualstudio.com/{VSCODE_VERSION}/darwin-arm64/stable"
+            return f"https://update.code.visualstudio.com/{version}/darwin-arm64/stable"
         else:
-            return f"https://update.code.visualstudio.com/{VSCODE_VERSION}/darwin/stable"
+            return f"https://update.code.visualstudio.com/{version}/darwin/stable"
     elif system == "Linux":
         if machine == "x86_64":
-            return f"https://update.code.visualstudio.com/{VSCODE_VERSION}/linux-x64/stable"
+            return f"https://update.code.visualstudio.com/{version}/linux-x64/stable"
         elif machine == "aarch64":
-            return f"https://update.code.visualstudio.com/{VSCODE_VERSION}/linux-arm64/stable"
+            return f"https://update.code.visualstudio.com/{version}/linux-arm64/stable"
     
     raise Exception(f"Unsupported platform: {system} {machine}")
 

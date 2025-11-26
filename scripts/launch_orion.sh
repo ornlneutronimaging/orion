@@ -34,6 +34,14 @@ if [ ! -f "$APP_PATH" ]; then
     fi
 fi
 
+# Define Portable Directories
+if [ "$OS" == "Darwin" ]; then
+    DATA_DIR="$SCRIPT_DIR/../Resources/code-portable-data"
+else
+    DATA_DIR="$SCRIPT_DIR/../code-portable-data"
+fi
+EXT_DIR="$DATA_DIR/extensions"
+
 # --- Main Logic ---
 
 # Check if App exists
@@ -45,8 +53,8 @@ fi
 
 echo "Launching Orion Studio..."
 if [ "$OS" == "Darwin" ]; then
-    export ELECTRON_RUN_AS_NODE=1
-    "$APP_PATH" "$CLI_PATH" "${ARGS[@]}"
+    # Launch Electron directly as the main app
+    "$APP_PATH" --user-data-dir "$DATA_DIR" --extensions-dir "$EXT_DIR" "$@"
 else
-    "$APP_PATH" "${ARGS[@]}"
+    "$APP_PATH" --user-data-dir "$DATA_DIR" --extensions-dir "$EXT_DIR" "$@"
 fi

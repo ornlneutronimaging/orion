@@ -1,5 +1,6 @@
 {
     "workbench.startupEditor": "none",
+    "workbench.colorTheme": "Default Light Modern",
     "workbench.iconTheme": "vs-seti",
     "security.workspace.trust.enabled": false,
     "telemetry.telemetryLevel": "off",
@@ -12,5 +13,16 @@
     "workbench.statusBar.visible": true,
     "window.menuBarVisibility": "compact",
     "jupyter.askForKernelRestart": false,
-    "http.proxyStrictSSL": false
+    "http.proxyStrictSSL": false,
+    "remote.SSH.defaultExtensions": [
+        "ms-toolsai.jupyter",
+        "ms-toolsai.jupyter-renderers",
+        "ms-toolsai.vscode-jupyter-cell-tags",
+        "ms-python.python",
+        "ms-python.vscode-pylance",
+        "ms-python.debugpy",
+        "github.copilot",
+        "github.copilot-chat",
+        "tamasfe.even-better-toml"
+    ]
 }

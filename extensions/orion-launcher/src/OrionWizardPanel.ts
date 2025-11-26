@@ -63,11 +63,30 @@ export class OrionWizardPanel {
                     case 'selectFolder':
                         this._selectFolder();
                         return;
+                    case 'connectRemote':
+                        this._connectRemote(message.host);
+                        return;
                 }
             },
             null,
             this._disposables
         );
+    }
+
+    private async _connectRemote(host: string) {
+        // Open a new window with the remote authority
+        // We use the 'vscode.newWindow' command with the remoteAuthority option
+        // The format for ssh remote is 'ssh-remote+<host>'
+        try {
+            await vscode.commands.executeCommand('vscode.newWindow', {
+                remoteAuthority: `ssh-remote+${host}`,
+                reuseWindow: true
+            });
+            // Close the wizard as we are moving to a new window
+            this.dispose();
+        } catch (e) {
+            vscode.window.showErrorMessage(`Failed to connect to ${host}: ${e}`);
+        }
     }
 
     private async _selectFolder() {
@@ -114,7 +133,24 @@ export class OrionWizardPanel {
             if (success) {
                 vscode.window.showInformationMessage('Setup complete! Opening workspace...');
                 if (config.targetDir) {
-                    const uri = vscode.Uri.file(config.targetDir);
+                    let uri: vscode.Uri;
+                    if (vscode.env.remoteName) {
+                        // Construct remote URI
+                        // Cast to any to avoid type error with older definitions
+                        const authority = (vscode.env as any).remoteAuthority;
+                        if (authority) {
+                            uri = vscode.Uri.from({
+                                scheme: 'vscode-remote',
+                                authority: authority,
+                                path: config.targetDir
+                            });
+                        } else {
+                            // Fallback if authority is missing (shouldn't happen in remote)
+                            uri = vscode.Uri.file(config.targetDir);
+                        }
+                    } else {
+                        uri = vscode.Uri.file(config.targetDir);
+                    }
                     vscode.commands.executeCommand('vscode.openFolder', uri);
                 }
             }
@@ -143,6 +179,7 @@ export class OrionWizardPanel {
     private _getHtmlForWebview(webview: vscode.Webview) {
         // Use a nonce to only allow specific scripts to be run
         const nonce = getNonce();
+        const isRemote = !!vscode.env.remoteName;
 
         return `<!DOCTYPE html>
 			<html lang="en">
@@ -176,24 +213,63 @@ export class OrionWizardPanel {
                         color: var(--vscode-input-foreground);
                         border: 1px solid var(--vscode-input-border);
                     }
+                    .radio-group { margin-bottom: 15px; }
+                    .radio-group label { display: flex; align-items: center; gap: 10px; cursor: pointer; padding: 5px; }
+                    .radio-group label:hover { background-color: var(--vscode-list-hoverBackground); }
                 </style>
 			</head>
 			<body>
                 <div class="container">
                     <!-- Step 1: Welcome -->
-                    <div id="step-1" class="step active">
+                    <div id="step-1" class="step">
                         <h1>Welcome to ORION Studio</h1>
                         <p style="text-align: center; margin-bottom: 30px;">Select your working mode:</p>
                         <button class="btn" onclick="nextStep(2)">Data Reduction Locally</button>
-                        <button class="btn btn-secondary" disabled>Connect to Analysis Cluster (Coming Soon)</button>
+                        <button class="btn btn-secondary" onclick="nextStep('remote')">Connect to Analysis Cluster</button>
+                    </div>
+
+                    <!-- Step Remote: Host Selection -->
+                    <div id="step-remote" class="step">
+                        <h1>Connect to Cluster</h1>
+                        <p>Select the analysis node to connect to:</p>
+                        
+                        <div class="radio-group">
+                            <label>
+                                <input type="radio" name="host" value="bl10-analysis1.sns.gov" checked onchange="toggleCustomHost()">
+                                <div>
+                                    <strong>bl10-analysis1.sns.gov</strong> (Default)
+                                    <div style="font-size: 0.8em; opacity: 0.8;">Requires ORNL Network Connection</div>
+                                </div>
+                            </label>
+                            <label>
+                                <input type="radio" name="host" value="analysis.sns.gov" onchange="toggleCustomHost()">
+                                <div>
+                                    <strong>analysis.sns.gov</strong>
+                                    <div style="font-size: 0.8em; opacity: 0.8;">Load Balancer</div>
+                                </div>
+                            </label>
+                            <label>
+                                <input type="radio" name="host" value="custom" onchange="toggleCustomHost()">
+                                <strong>Custom Host</strong>
+                            </label>
+                        </div>
+
+                        <div id="custom-host-input" class="input-group" style="display: none;">
+                            <label>Hostname</label>
+                            <input type="text" id="customHost" placeholder="e.g. user@host.ornl.gov">
+                        </div>
+
+                        <button class="btn" onclick="connectRemote()">Connect</button>
+                        <button class="btn btn-secondary" onclick="prevStep(1)">Back</button>
                     </div>
 
                     <!-- Step 2: Action -->
                     <div id="step-2" class="step">
                         <h1>Setup Workspace</h1>
+                        <p id="remote-indicator" style="text-align: center; color: var(--vscode-descriptionForeground); display: none;">Connected to Remote Environment</p>
                         <button class="btn" onclick="setMode('EXISTING'); nextStep(3)">Open Existing Notebooks</button>
                         <button class="btn" onclick="setMode('CLONE'); nextStep(3)">Clone Fresh Copy</button>
-                        <button class="btn btn-secondary" onclick="prevStep(1)">Back</button>
+                        <button class="btn btn-secondary" onclick="prevStep(1)" id="back-to-welcome">Back</button>
                     </div>
 
                     <!-- Step 3: Configuration -->
@@ -204,7 +280,7 @@ export class OrionWizardPanel {
                             <label>Target Folder</label>
                             <div style="display: flex; gap: 10px;">
                                 <input type="text" id="targetDir" readonly placeholder="Select a folder...">
-                                <button class="btn" style="width: auto;" onclick="selectFolder()">Browse</button>
+                                <button id="browse-btn" class="btn" style="width: auto;" onclick="selectFolder()">Browse</button>
                             </div>
                         </div>
 
@@ -229,6 +305,20 @@ export class OrionWizardPanel {
                 <script>
                     const vscode = acquireVsCodeApi();
                     let currentMode = '';
+                    const isRemote = ${isRemote};
+
+                    // Initial State
+                    if (isRemote) {
+                        document.getElementById('step-2').classList.add('active');
+                        document.getElementById('remote-indicator').style.display = 'block';
+                        document.getElementById('back-to-welcome').style.display = 'none'; 
+                        // Keep Browse button visible as it works with remote context
+                        // document.getElementById('browse-btn').style.display = 'none'; 
+                        document.getElementById('targetDir').readOnly = false; // Allow typing
+                        document.getElementById('targetDir').placeholder = "Enter absolute path (e.g. /SNS/users/...)";
+                    } else {
+                        document.getElementById('step-1').classList.add('active');
+                    }
 
                     function nextStep(step) {
                         document.querySelectorAll('.step').forEach(el => el.classList.remove('active'));
@@ -248,6 +338,26 @@ export class OrionWizardPanel {
                         vscode.postMessage({ command: 'selectFolder' });
                     }
 
+                    function toggleCustomHost() {
+                        const isCustom = document.querySelector('input[name="host"][value="custom"]').checked;
+                        document.getElementById('custom-host-input').style.display = isCustom ? 'block' : 'none';
+                    }
+
+                    function connectRemote() {
+                        let host = document.querySelector('input[name="host"]:checked').value;
+                        if (host === 'custom') {
+                            host = document.getElementById('customHost').value;
+                        }
+                        
+                        if (!host) {
+                            vscode.postMessage({ command: 'alert', text: 'Please specify a hostname.' });
+                            return;
+                        }
+
+                        vscode.postMessage({ command: 'alert', text: 'Connecting to ' + host + '...' });
+                        vscode.postMessage({ command: 'connectRemote', host: host });
+                    }
+
                     function finishSetup() {
                         const config = {
                             mode: currentMode,
@@ -261,7 +371,6 @@ export class OrionWizardPanel {
                             vscode.postMessage({ command: 'alert', text: 'Please select a target folder.' });
                             return;
                         }
-
 
                         vscode.postMessage({ command: 'saveConfig', config: config });
                     }
