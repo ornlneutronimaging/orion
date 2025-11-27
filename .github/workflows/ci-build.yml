@@ -64,18 +64,5 @@ jobs:
             fi
           fi
 
-      - name: Upload Artifact (macOS DMG)
-        if: matrix.os == 'macos-latest'
-        uses: actions/upload-artifact@v5
-        with:
-          name: OrionStudio-macOS
-          path: dist/OrionStudio-macOS.dmg
-          retention-days: 5
-
-      - name: Upload Artifact (Linux tarball)
-        if: matrix.os == 'ubuntu-latest'
-        uses: actions/upload-artifact@v5
-        with:
-          name: OrionStudio-linux
-          path: dist/OrionStudio-linux.tar.gz
-          retention-days: 5
+      # Artifacts are only uploaded for tagged releases (see release.yml)
+      # CI builds just verify the build succeeds
