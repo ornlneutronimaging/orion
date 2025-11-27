@@ -1,41 +1,40 @@
 {
-    "name": "orion-launcher",
-    "displayName": "Orion Launcher",
-    "description": "Welcome wizard and setup for Orion Studio",
-    "version": "0.0.1",
-    "engines": {
-        "vscode": "^1.95.0"
-    },
-    "categories": [
-        "Other"
-    ],
-    "extensionKind": [
-        "ui"
-    ],
-    "activationEvents": [
-        "onStartupFinished"
-    ],
-    "main": "./out/extension.js",
-    "contributes": {
-        "commands": [
-            {
-                "command": "orion-launcher.openWizard",
-                "title": "Open Orion Wizard"
-            }
-        ]
-    },
-    "scripts": {
-        "vscode:prepublish": "npm run compile",
-        "compile": "tsc -p ./",
-        "watch": "tsc -watch -p ./"
-    },
-    "devDependencies": {
-        "@types/vscode": "^1.95.0",
-        "@types/node": "20.x",
-        "typescript": "^5.3.3"
-    },
-    "dependencies": {
-        "@vscode/webview-ui-toolkit": "^1.4.0",
-        "simple-git": "^3.22.0"
-    }
+  "name": "orion-launcher",
+  "displayName": "Orion Launcher",
+  "description": "Welcome wizard and setup for Orion Studio",
+  "version": "0.0.1",
+  "engines": {
+    "vscode": "^1.95.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "extensionKind": [
+    "ui"
+  ],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "orion-launcher.openWizard",
+        "title": "Open Orion Wizard"
+      }
+    ]
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./"
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.95.0",
+    "@types/node": "20.x",
+    "typescript": "^5.3.3"
+  },
+  "dependencies": {
+    "simple-git": "^3.22.0"
+  }
 }

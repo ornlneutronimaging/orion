@@ -98,14 +98,14 @@ import * as vscode from 'vscode';
 
 export function activate(context: vscode.ExtensionContext) {
     console.log('Extension activated');
-    
+
     let disposable = vscode.commands.registerCommand(
         'extension.command',
         () => {
             vscode.window.showInformationMessage('Hello from Orion!');
         }
     );
-    
+
     context.subscriptions.push(disposable);
 }
 
@@ -133,6 +133,7 @@ npm run package
 ### Neutron Imaging Tools
 
 Provides core functionality for neutron imaging analysis:
+
 - Image loading and preprocessing
 - Flat-field and dark-current correction
 - Region of interest (ROI) selection
@@ -141,6 +142,7 @@ Provides core functionality for neutron imaging analysis:
 ### Jupyter Integration
 
 Native Jupyter notebook support:
+
 - Notebook creation and editing
 - Kernel management
 - Cell execution
@@ -150,6 +152,7 @@ Native Jupyter notebook support:
 ### Pixi Environment Manager
 
 Python environment management:
+
 - Environment creation and deletion
 - Package installation and removal
 - Environment switching
@@ -158,11 +161,13 @@ Python environment management:
 ### Beamline Integrations
 
 #### MARS (HFIR)
+
 - Data acquisition
 - Instrument control
 - Real-time monitoring
 
 #### VENUS (SNS)
+
 - Data acquisition
 - Instrument control
 - Real-time monitoring
@@ -170,6 +175,7 @@ Python environment management:
 ### Data Visualization
 
 Advanced visualization capabilities:
+
 - 2D image viewer with advanced controls
 - 3D volume rendering
 - Interactive plotting
@@ -179,6 +185,7 @@ Advanced visualization capabilities:
 ### AI Assistant
 
 Intelligent code assistance:
+
 - Context-aware completions
 - Documentation lookup
 - Best practice suggestions
@@ -189,6 +196,7 @@ Intelligent code assistance:
 ### API Usage
 
 Extensions can use:
+
 - **VSCode API**: Full access to editor, workspace, UI components
 - **Node.js API**: File system, networking, etc.
 - **Orion-specific APIs**: Custom APIs for neutron imaging workflows
@@ -205,6 +213,7 @@ Extensions can use:
 ### Publishing
 
 Extensions can be:
+
 1. **Bundled**: Included with Orion Studio distribution
 2. **Marketplace**: Published to extension marketplace (future)
 3. **Private**: Distributed internally
@@ -240,6 +249,7 @@ suite('Integration Tests', () => {
 ## Dependencies
 
 Common dependencies for extensions:
+
 - `vscode`: VSCode extension API
 - `@types/node`: Node.js type definitions
 - `@types/vscode`: VSCode API type definitions
@@ -268,6 +278,7 @@ See `CONTRIBUTING.md` for detailed guidelines.
 ## Support
 
 For extension development help:
+
 - GitHub Issues
 - Developer Documentation
 - Community Forum

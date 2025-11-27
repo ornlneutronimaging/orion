@@ -2,17 +2,18 @@
 authors = ["Chen Zhang <chenzhang8722@gmail.com>"]
 channels = ["conda-forge"]
 name = "orion"
-platforms = ["osx-arm64"]
+platforms = ["osx-arm64", "linux-64"]
 version = "0.1.0"
 
 [tasks]
-# VSCode build tasks
-get-vscode = "cd vscodium && VSCODE_QUALITY=stable ./get_repo.sh"
-build-vscode = "cd vscodium/vscode && npm install && npm run gulp -- vscode-darwin-arm64"
-rebuild-vscode = "cd vscodium/vscode && npm run gulp -- vscode-darwin-arm64"
-clean-vscode = "rm -rf vscodium/vscode/node_modules vscodium/VSCode-darwin-arm64"
-run-vscode = "open vscodium/VSCode-darwin-arm64/Code\\ -\\ OSS.app"
+build = "python scripts/build_orion.py"
+clean = "rm -rf build dist"
+clean_config = "rm -rf ~/.orion"
+lint = "pre-commit run --all-files"
+lint-install = "pre-commit install"
 
 [dependencies]
-nodejs = "22.*"   # VSCode expects Node 22.x
-python = "3.11.*" # Stable Python version (3.14 is too new)
+nodejs = "22.*"     # VSCode expects Node 22.x
+python = "3.11.*"   # Stable Python version (3.14 is too new)
+pre-commit = ">=3.8"
+ruff = ">=0.8"

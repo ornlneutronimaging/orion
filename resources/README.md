@@ -32,6 +32,7 @@ resources/
 ### Colors
 
 Primary color palette (to be defined):
+
 - Primary: TBD
 - Secondary: TBD
 - Accent: TBD
@@ -41,6 +42,7 @@ Primary color palette (to be defined):
 ### Logo Usage
 
 The Orion Studio logo represents ORNL neutron imaging capabilities:
+
 - Use provided logo files without modification
 - Maintain clear space around the logo
 - Don't distort or recolor the logo
@@ -83,6 +85,7 @@ Place custom themes in `resources/themes/` directory.
 ## Marketing Assets
 
 Documentation and marketing images should:
+
 - Be high quality (300 DPI for print)
 - Use consistent styling
 - Follow brand guidelines
@@ -91,6 +94,7 @@ Documentation and marketing images should:
 ## Contributing Assets
 
 When contributing new resources:
+
 1. Follow the directory structure
 2. Use descriptive file names
 3. Include source files when possible (e.g., `.sketch`, `.figma`)
@@ -100,6 +104,7 @@ When contributing new resources:
 ## License
 
 All branding assets are:
+
 - © Oak Ridge National Laboratory (ORNL)
 - © Microsoft Corporation (for VSCode-derived assets)
 - Subject to trademark restrictions
@@ -109,6 +114,7 @@ Third-party assets must include appropriate attribution and licensing informatio
 ## Contact
 
 For branding questions or custom asset requests:
+
 - Design team: [TBD]
 - Marketing: [TBD]
 

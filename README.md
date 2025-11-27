@@ -9,12 +9,14 @@ Unlike a traditional fork, Orion Studio is built as a **custom wrapper** around 
 ## Why Orion Studio?
 
 Traditional notebook environments (JupyterLab in browsers) present challenges:
+
 - Browser-based interfaces lack native IDE features
 - Manual Python environment management
 - No integrated git version control for notebooks
 - Separate authentication systems
 
 **Orion Studio solves these problems by providing:**
+
 - Native desktop application with full IDE capabilities
 - **Orion Launcher**: A custom wizard for easy setup, remote connection, and project cloning
 - **Pixi Integration**: Automated Python environment management
@@ -24,12 +26,14 @@ Traditional notebook environments (JupyterLab in browsers) present challenges:
 ## Key Features
 
 ### 🎯 Core Capabilities
+
 - **Native Jupyter Notebooks**: Full-featured notebook interface built on VSCode's excellent Jupyter extension
 - **Git Version Control**: Integrated git support for notebook versioning
 - **Pixi Environment Manager**: Auto-detect and manage Python environments from `pixi.toml`
 - **Remote Connection Wizard**: Simplified connection to ORNL analysis clusters (e.g., `analysis.sns.gov`)
 
 ### 🔬 Neutron Imaging Tools
+
 - Pre-configured for neutron radiography and tomography workflows
 - Custom visualization tools for neutron data
 - Analysis templates and snippets
@@ -49,19 +53,21 @@ See [ROADMAP.md](docs/ROADMAP.md) for the complete development plan.
 
 To build Orion Studio locally, you need Python 3 and Node.js installed.
 
-1.  **Clone the repository:**
+1. **Clone the repository:**
+
     ```bash
     git clone https://github.com/ornlneutronimaging/orion.git
     cd orion
     ```
 
-2.  **Build the Application:**
+2. **Build the Application:**
     The build script downloads the latest stable VS Code, builds the `orion-launcher` extension, and bundles everything into a standalone application.
+
     ```bash
     python3 scripts/build_orion.py
     ```
 
-3.  **Run Orion Studio:**
+3. **Run Orion Studio:**
     - **macOS**: Open `dist/Orion Studio.app`
     - **Linux**: Run `dist/OrionStudio/OrionStudio`
 

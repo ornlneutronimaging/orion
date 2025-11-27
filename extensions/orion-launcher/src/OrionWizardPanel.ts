@@ -1,188 +1,196 @@
-import * as vscode from 'vscode';
-import * as fs from 'fs';
-import * as path from 'path';
-import * as os from 'os';
+import * as vscode from "vscode";
+import * as fs from "fs";
+import * as path from "path";
+import * as os from "os";
 
 export class OrionWizardPanel {
-    public static currentPanel: OrionWizardPanel | undefined;
-    public static readonly viewType = 'orionWizard';
+  public static currentPanel: OrionWizardPanel | undefined;
+  public static readonly viewType = "orionWizard";
 
-    private readonly _panel: vscode.WebviewPanel;
-    private readonly _extensionUri: vscode.Uri;
-    private _disposables: vscode.Disposable[] = [];
+  private readonly _panel: vscode.WebviewPanel;
+  private readonly _extensionUri: vscode.Uri;
+  private _disposables: vscode.Disposable[] = [];
 
-    public static createOrShow(extensionUri: vscode.Uri) {
-        const column = vscode.window.activeTextEditor
-            ? vscode.window.activeTextEditor.viewColumn
-            : undefined;
+  public static createOrShow(extensionUri: vscode.Uri) {
+    const column = vscode.window.activeTextEditor
+      ? vscode.window.activeTextEditor.viewColumn
+      : undefined;
 
-        // If we already have a panel, show it.
-        if (OrionWizardPanel.currentPanel) {
-            OrionWizardPanel.currentPanel._panel.reveal(column);
+    // If we already have a panel, show it.
+    if (OrionWizardPanel.currentPanel) {
+      OrionWizardPanel.currentPanel._panel.reveal(column);
+      return;
+    }
+
+    // Otherwise, create a new panel.
+    const panel = vscode.window.createWebviewPanel(
+      OrionWizardPanel.viewType,
+      "Orion Studio Setup",
+      column || vscode.ViewColumn.One,
+      {
+        enableScripts: true,
+        localResourceRoots: [
+          vscode.Uri.joinPath(extensionUri, "media"),
+          vscode.Uri.joinPath(extensionUri, "out"),
+        ],
+      },
+    );
+
+    OrionWizardPanel.currentPanel = new OrionWizardPanel(panel, extensionUri);
+  }
+
+  private constructor(panel: vscode.WebviewPanel, extensionUri: vscode.Uri) {
+    this._panel = panel;
+    this._extensionUri = extensionUri;
+
+    // Set the webview's initial html content
+    this._update();
+
+    // Listen for when the panel is disposed
+    // This happens when the user closes the panel or when the panel is closed programmatically
+    this._panel.onDidDispose(() => this.dispose(), null, this._disposables);
+
+    // Handle messages from the webview
+    this._panel.webview.onDidReceiveMessage(
+      (message) => {
+        switch (message.command) {
+          case "alert":
+            vscode.window.showErrorMessage(message.text);
+            return;
+          case "saveConfig":
+            this._saveConfig(message.config);
+            return;
+          case "selectFolder":
+            this._selectFolder();
+            return;
+          case "connectRemote":
+            this._connectRemote(message.host);
             return;
         }
+      },
+      null,
+      this._disposables,
+    );
+  }
 
-        // Otherwise, create a new panel.
-        const panel = vscode.window.createWebviewPanel(
-            OrionWizardPanel.viewType,
-            'Orion Studio Setup',
-            column || vscode.ViewColumn.One,
-            {
-                enableScripts: true,
-                localResourceRoots: [
-                    vscode.Uri.joinPath(extensionUri, 'media'),
-                    vscode.Uri.joinPath(extensionUri, 'out')
-                ]
+  private async _connectRemote(host: string) {
+    // Open a new window with the remote authority
+    // We use the 'vscode.newWindow' command with the remoteAuthority option
+    // The format for ssh remote is 'ssh-remote+<host>'
+    try {
+      await vscode.commands.executeCommand("vscode.newWindow", {
+        remoteAuthority: `ssh-remote+${host}`,
+        reuseWindow: true,
+      });
+      // Close the wizard as we are moving to a new window
+      this.dispose();
+    } catch (e) {
+      vscode.window.showErrorMessage(`Failed to connect to ${host}: ${e}`);
+    }
+  }
+
+  private async _selectFolder() {
+    const options: vscode.OpenDialogOptions = {
+      canSelectFiles: false,
+      canSelectFolders: true,
+      canSelectMany: false,
+      openLabel: "Select Folder",
+    };
+
+    const folderUri = await vscode.window.showOpenDialog(options);
+    if (folderUri && folderUri[0]) {
+      this._panel.webview.postMessage({
+        command: "folderSelected",
+        path: folderUri[0].fsPath,
+      });
+    }
+  }
+
+  private async _saveConfig(config: any) {
+    const homeDir = os.homedir();
+    const orionDir = path.join(homeDir, ".orion");
+    if (!fs.existsSync(orionDir)) {
+      fs.mkdirSync(orionDir);
+    }
+
+    // If cloning, append the subdirectory to the targetDir
+    if (config.mode === "CLONE") {
+      config.targetDir = path.join(config.targetDir, "neutron_notebooks");
+    }
+
+    const configPath = path.join(orionDir, "config.json");
+    fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
+
+    // Close wizard immediately
+    this.dispose();
+
+    // Run Setup with Progress
+    await vscode.window.withProgress(
+      {
+        location: vscode.ProgressLocation.Notification,
+        title: "Setting up Orion Studio",
+        cancellable: false,
+      },
+      async (progress) => {
+        const { runSetup } = await import("./extension");
+        // Cast config to any to avoid type issues with dynamic import
+        const success = await runSetup(config, progress);
+
+        if (success) {
+          vscode.window.showInformationMessage(
+            "Setup complete! Opening workspace...",
+          );
+          if (config.targetDir) {
+            let uri: vscode.Uri;
+            if (vscode.env.remoteName) {
+              // Construct remote URI
+              // Use 'as any' to access remoteAuthority if not in type definitions, or check if it exists on env
+              const authority = (vscode.env as any).remoteAuthority;
+              if (authority) {
+                uri = vscode.Uri.from({
+                  scheme: "vscode-remote",
+                  authority: authority,
+                  path: config.targetDir,
+                });
+              } else {
+                // Fallback if authority is missing (shouldn't happen in remote)
+                uri = vscode.Uri.file(config.targetDir);
+              }
+            } else {
+              uri = vscode.Uri.file(config.targetDir);
             }
-        );
-
-        OrionWizardPanel.currentPanel = new OrionWizardPanel(panel, extensionUri);
-    }
-
-    private constructor(panel: vscode.WebviewPanel, extensionUri: vscode.Uri) {
-        this._panel = panel;
-        this._extensionUri = extensionUri;
-
-        // Set the webview's initial html content
-        this._update();
-
-        // Listen for when the panel is disposed
-        // This happens when the user closes the panel or when the panel is closed programmatically
-        this._panel.onDidDispose(() => this.dispose(), null, this._disposables);
-
-        // Handle messages from the webview
-        this._panel.webview.onDidReceiveMessage(
-            message => {
-                switch (message.command) {
-                    case 'alert':
-                        vscode.window.showErrorMessage(message.text);
-                        return;
-                    case 'saveConfig':
-                        this._saveConfig(message.config);
-                        return;
-                    case 'selectFolder':
-                        this._selectFolder();
-                        return;
-                    case 'connectRemote':
-                        this._connectRemote(message.host);
-                        return;
-                }
-            },
-            null,
-            this._disposables
-        );
-    }
-
-    private async _connectRemote(host: string) {
-        // Open a new window with the remote authority
-        // We use the 'vscode.newWindow' command with the remoteAuthority option
-        // The format for ssh remote is 'ssh-remote+<host>'
-        try {
-            await vscode.commands.executeCommand('vscode.newWindow', {
-                remoteAuthority: `ssh-remote+${host}`,
-                reuseWindow: true
-            });
-            // Close the wizard as we are moving to a new window
-            this.dispose();
-        } catch (e) {
-            vscode.window.showErrorMessage(`Failed to connect to ${host}: ${e}`);
+            vscode.commands.executeCommand("vscode.openFolder", uri);
+          }
         }
+      },
+    );
+  }
+
+  public dispose() {
+    OrionWizardPanel.currentPanel = undefined;
+
+    // Clean up our resources
+    this._panel.dispose();
+
+    while (this._disposables.length) {
+      const x = this._disposables.pop();
+      if (x) {
+        x.dispose();
+      }
     }
+  }
 
-    private async _selectFolder() {
-        const options: vscode.OpenDialogOptions = {
-            canSelectFiles: false,
-            canSelectFolders: true,
-            canSelectMany: false,
-            openLabel: 'Select Folder'
-        };
+  private _update() {
+    const webview = this._panel.webview;
+    this._panel.webview.html = this._getHtmlForWebview(webview);
+  }
 
-        const folderUri = await vscode.window.showOpenDialog(options);
-        if (folderUri && folderUri[0]) {
-            this._panel.webview.postMessage({ command: 'folderSelected', path: folderUri[0].fsPath });
-        }
-    }
+  private _getHtmlForWebview(webview: vscode.Webview) {
+    // Use a nonce to only allow specific scripts to be run
+    const nonce = getNonce();
+    const isRemote = !!vscode.env.remoteName;
 
-    private async _saveConfig(config: any) {
-        const homeDir = os.homedir();
-        const orionDir = path.join(homeDir, '.orion');
-        if (!fs.existsSync(orionDir)) {
-            fs.mkdirSync(orionDir);
-        }
-
-        // If cloning, append the subdirectory to the targetDir
-        if (config.mode === 'CLONE') {
-            config.targetDir = path.join(config.targetDir, 'neutron_notebooks');
-        }
-
-        const configPath = path.join(orionDir, 'config.json');
-        fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
-
-        // Close wizard immediately
-        this.dispose();
-
-        // Run Setup with Progress
-        await vscode.window.withProgress({
-            location: vscode.ProgressLocation.Notification,
-            title: "Setting up Orion Studio",
-            cancellable: false
-        }, async (progress) => {
-            const { runSetup } = await import('./extension');
-            // Cast config to any to avoid type issues with dynamic import
-            const success = await runSetup(config, progress);
-
-            if (success) {
-                vscode.window.showInformationMessage('Setup complete! Opening workspace...');
-                if (config.targetDir) {
-                    let uri: vscode.Uri;
-                    if (vscode.env.remoteName) {
-                        // Construct remote URI
-                        // Use 'as any' to access remoteAuthority if not in type definitions, or check if it exists on env
-                        const authority = (vscode.env as any).remoteAuthority;
-                        if (authority) {
-                            uri = vscode.Uri.from({
-                                scheme: 'vscode-remote',
-                                authority: authority,
-                                path: config.targetDir
-                            });
-                        } else {
-                            // Fallback if authority is missing (shouldn't happen in remote)
-                            uri = vscode.Uri.file(config.targetDir);
-                        }
-                    } else {
-                        uri = vscode.Uri.file(config.targetDir);
-                    }
-                    vscode.commands.executeCommand('vscode.openFolder', uri);
-                }
-            }
-        });
-    }
-
-    public dispose() {
-        OrionWizardPanel.currentPanel = undefined;
-
-        // Clean up our resources
-        this._panel.dispose();
-
-        while (this._disposables.length) {
-            const x = this._disposables.pop();
-            if (x) {
-                x.dispose();
-            }
-        }
-    }
-
-    private _update() {
-        const webview = this._panel.webview;
-        this._panel.webview.html = this._getHtmlForWebview(webview);
-    }
-
-    private _getHtmlForWebview(webview: vscode.Webview) {
-        // Use a nonce to only allow specific scripts to be run
-        const nonce = getNonce();
-        const isRemote = !!vscode.env.remoteName;
-
-        return `<!DOCTYPE html>
+    return `<!DOCTYPE html>
 			<html lang="en">
 			<head>
 				<meta charset="UTF-8">
@@ -194,10 +202,10 @@ export class OrionWizardPanel {
                     h1 { text-align: center; }
                     .step { display: none; }
                     .step.active { display: block; }
-                    .btn { 
-                        background-color: var(--vscode-button-background); 
-                        color: var(--vscode-button-foreground); 
-                        border: none; padding: 10px 20px; cursor: pointer; 
+                    .btn {
+                        background-color: var(--vscode-button-background);
+                        color: var(--vscode-button-foreground);
+                        border: none; padding: 10px 20px; cursor: pointer;
                         width: 100%; margin-bottom: 10px;
                         font-size: 1.1em;
                     }
@@ -205,12 +213,12 @@ export class OrionWizardPanel {
                     .btn:disabled { opacity: 0.5; cursor: not-allowed; }
                     .btn-secondary { background-color: var(--vscode-button-secondaryBackground); color: var(--vscode-button-secondaryForeground); }
                     .btn-secondary:hover { background-color: var(--vscode-button-secondaryHoverBackground); }
-                    
+
                     .input-group { margin-bottom: 15px; }
                     label { display: block; margin-bottom: 5px; }
-                    input[type="text"] { 
-                        width: 100%; padding: 8px; 
-                        background-color: var(--vscode-input-background); 
+                    input[type="text"] {
+                        width: 100%; padding: 8px;
+                        background-color: var(--vscode-input-background);
                         color: var(--vscode-input-foreground);
                         border: 1px solid var(--vscode-input-border);
                     }
@@ -233,7 +241,7 @@ export class OrionWizardPanel {
                     <div id="step-remote" class="step">
                         <h1>Connect to Cluster</h1>
                         <p>Select the analysis node to connect to:</p>
-                        
+
                         <div class="radio-group">
                             <label>
                                 <input type="radio" name="host" value="bl10-analysis1.sns.gov" checked onchange="toggleCustomHost()">
@@ -276,7 +284,7 @@ export class OrionWizardPanel {
                     <!-- Step 3: Configuration -->
                     <div id="step-3" class="step">
                         <h1>Configuration</h1>
-                        
+
                         <div class="input-group">
                             <label>Target Folder</label>
                             <div style="display: flex; gap: 10px;">
@@ -288,7 +296,7 @@ export class OrionWizardPanel {
                         <div id="clone-options" style="display: none;">
                             <div class="input-group">
                                 <label>Branch Name</label>
-                                <input type="text" id="branchName" value="analysis-${new Date().toISOString().slice(0, 10).replace(/-/g, '')}">
+                                <input type="text" id="branchName" value="analysis-${new Date().toISOString().slice(0, 10).replace(/-/g, "")}">
                             </div>
                         </div>
 
@@ -312,9 +320,9 @@ export class OrionWizardPanel {
                     if (isRemote) {
                         document.getElementById('step-2').classList.add('active');
                         document.getElementById('remote-indicator').style.display = 'block';
-                        document.getElementById('back-to-welcome').style.display = 'none'; 
+                        document.getElementById('back-to-welcome').style.display = 'none';
                         // Keep Browse button visible as it works with remote context
-                        // document.getElementById('browse-btn').style.display = 'none'; 
+                        // document.getElementById('browse-btn').style.display = 'none';
                         document.getElementById('targetDir').readOnly = false; // Allow typing
                         document.getElementById('targetDir').placeholder = "Enter absolute path (e.g. /SNS/users/...)";
                     } else {
@@ -349,7 +357,7 @@ export class OrionWizardPanel {
                         if (host === 'custom') {
                             host = document.getElementById('customHost').value;
                         }
-                        
+
                         if (!host) {
                             vscode.postMessage({ command: 'alert', text: 'Please specify a hostname.' });
                             return;
@@ -367,7 +375,7 @@ export class OrionWizardPanel {
                             enableCopilot: document.getElementById('enableCopilot').checked,
                             setupDate: new Date().toISOString()
                         };
-                        
+
                         if (!config.targetDir) {
                             vscode.postMessage({ command: 'alert', text: 'Please select a target folder.' });
                             return;
@@ -387,14 +395,15 @@ export class OrionWizardPanel {
                 </script>
 			</body>
 			</html>`;
-    }
+  }
 }
 
 function getNonce() {
-    let text = '';
-    const possible = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-    for (let i = 0; i < 32; i++) {
-        text += possible.charAt(Math.floor(Math.random() * possible.length));
-    }
-    return text;
+  let text = "";
+  const possible =
+    "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+  for (let i = 0; i < 32; i++) {
+    text += possible.charAt(Math.floor(Math.random() * possible.length));
+  }
+  return text;
 }

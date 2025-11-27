@@ -12,17 +12,20 @@ This directory contains build, development, and deployment scripts for Orion Stu
 ## Scripts Overview (Coming Soon)
 
 ### Build Scripts
+
 - `build.sh` / `build.ps1`: Main build script for all platforms
 - `package.sh` / `package.ps1`: Create distribution packages
 - `sign.sh` / `sign.ps1`: Code signing for releases
 
 ### Development Scripts
+
 - `setup-dev.sh` / `setup-dev.ps1`: Set up development environment
 - `watch.sh` / `watch.ps1`: Watch mode for development
 - `lint.sh` / `lint.ps1`: Run linters and formatters
 - `test.sh` / `test.ps1`: Run test suites
 
 ### Deployment Scripts
+
 - `release.sh` / `release.ps1`: Create a new release
 - `publish.sh` / `publish.ps1`: Publish to distribution channels
 - `update-version.sh` / `update-version.ps1`: Version bumping
@@ -61,6 +64,7 @@ For Windows, use PowerShell equivalents:
 ## Contributing
 
 When adding new scripts:
+
 1. Follow existing naming conventions
 2. Add documentation in this README
 3. Make scripts cross-platform when possible

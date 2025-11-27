@@ -1,467 +1,249 @@
 # Orion Studio - Architecture Document
 
 ## Overview
-A custom VSCode fork optimized for neutron imaging notebook workflows, similar to how Cursor customized VSCode for AI development.
+
+Orion Studio is a **custom wrapper** around the official Visual Studio Code distribution, purpose-built for neutron imaging notebook workflows at ORNL. Unlike traditional forks (e.g., VSCodium, Cursor), Orion Studio downloads the official VS Code binaries and bundles them with curated extensions and custom configuration.
+
+## Architecture Decision
+
+**Wrapper vs Fork:**
+
+| Approach | Pros | Cons |
+|----------|------|------|
+| Fork (VSCodium-style) | Full customization, can modify core UI | Complex builds (30-60 min), merge conflicts, maintenance burden |
+| Wrapper (Orion approach) | Simple builds (5 min), automatic VS Code updates, no merge conflicts | Limited to extension-based customization |
+
+**Decision:** Wrapper approach. The benefits of reduced maintenance and faster iteration outweigh the loss of deep customization. All custom features are implemented as VS Code extensions.
 
 ## Project Goals
+
 1. Provide stable, native Jupyter notebook interface (replacing browser-based JupyterLab)
 2. Integrate git-based notebook version management with UI controls
 3. Automate Python environment management via pixi
-4. Integrate ORNL LDAP/SSH authentication
+4. Enable remote SSH connection to ORNL analysis clusters
 5. Leverage existing VSCode extension marketplace
-6. Add custom neutron imaging-specific tools
+6. Add custom neutron imaging-specific tools via extensions
 
-## Architecture Overview
+## Project Structure
 
 ```
-orion-studio/
-├── vscode/                           # Forked from VSCodium
-│   ├── src/
-│   │   ├── vs/
-│   │   │   ├── orion/                # Our custom code namespace
-│   │   │   │   ├── browser/          # UI components
-│   │   │   │   │   ├── notebookVersionSelector/
-│   │   │   │   │   ├── pixiEnvironmentManager/
-│   │   │   │   │   └── authenticationProvider/
-│   │   │   │   ├── common/           # Shared code
-│   │   │   │   │   ├── config.ts
-│   │   │   │   │   └── constants.ts
-│   │   │   │   └── node/             # Backend services
-│   │   │   │       ├── pixiService.ts
-│   │   │   │       ├── ldapService.ts
-│   │   │   │       └── gitService.ts
-│   │   │   ├── workbench/            # VSCode workbench modifications
-│   │   │   │   └── contrib/orion/    # Register our features
-│   │   │   └── code/                 # Entry points
-│   ├── product.json                  # Branding configuration
-│   ├── package.json                  # Build dependencies
-│   └── build/                        # Build scripts
-├── extensions/                       # Pre-bundled extensions
-│   ├── ms-toolsai.jupyter/          # Jupyter notebook support
-│   ├── continue.continue/           # AI coding (OpenRouter)
-│   └── neutron-imaging/             # Custom extension
-│       ├── package.json
-│       └── src/
-│           ├── analysis/            # Neutron analysis tools
-│           ├── visualization/       # Custom viewers
-│           └── templates/           # Notebook templates
-├── resources/                        # Branding assets
-│   ├── icons/
-│   ├── themes/
-│   └── splash/
-└── scripts/
-    ├── build.sh                     # Build automation
-    ├── package-linux.sh             # Package for distribution
-    └── update-check.sh              # Auto-update mechanism
+orion/
+├── extensions/                 # Custom VS Code Extensions
+│   └── orion-launcher/         # Welcome wizard & setup extension
+│       ├── src/
+│       │   ├── extension.ts    # Extension entry point
+│       │   ├── wizard.ts       # Welcome wizard webview
+│       │   └── git.ts          # Git operations (clone, checkout)
+│       ├── package.json        # Extension manifest
+│       └── tsconfig.json
+├── scripts/
+│   ├── build_orion.py          # Main build script
+│   └── launch_orion.sh         # Launcher for packaged app
+├── config/
+│   ├── settings.json           # Default VS Code settings
+│   └── extensions.txt          # Extensions to bundle
+├── resources/                  # Branding assets (icons, splash)
+├── docs/                       # Documentation
+└── pixi.toml                   # Project dependencies
 ```
 
-## Core Custom Features
+## Build System
 
-### 1. Notebook Version Selector
-**Location:** Top toolbar (editor/title area)
-**Functionality:**
-- Detect git repository in workspace
-- Show current branch/tag
-- Dropdown menu listing available notebook versions
-- One-click checkout to different version
-- Warning if local changes exist
+### How It Works
 
-**Implementation:**
-```typescript
-// src/vs/orion/browser/notebookVersionSelector/notebookVersionSelector.ts
-export class NotebookVersionSelector {
-  // UI component in toolbar
-  // Calls git service to list tags/branches
-  // Executes checkout and refreshes workspace
-}
+The build script (`scripts/build_orion.py`) performs these steps:
+
+1. **Download VS Code**: Fetches latest stable VS Code from Microsoft's CDN
+2. **Create Wrapper App**: On macOS, creates `Orion Studio.app` bundle containing VS Code
+3. **Setup Portable Mode**: Configures VS Code to use bundled data directory
+4. **Build orion-launcher**: Compiles the custom extension
+5. **Install Extensions**: Downloads VSIX files directly from VS Code Marketplace
+
+### Key Components
+
+**`get_latest_version()`** - Queries VS Code release API for latest stable version
+
+**`download_and_install_vsix()`** - Downloads extensions directly from marketplace:
+
+- Queries marketplace API for extension metadata
+- Downloads platform-specific VSIX when available
+- Extracts to portable extensions directory
+
+**`install_with_dependencies()`** - Recursive dependency resolution:
+
+- Parses ExtensionDependencies and ExtensionPack properties
+- Installs dependencies before main extension
+- Handles circular dependencies with cycle detection
+
+### Platform Support
+
+| Platform | Build Output | Notes |
+|----------|--------------|-------|
+| macOS (ARM) | `dist/Orion Studio.app` | Universal binary via embedded VS Code |
+| macOS (Intel) | `dist/Orion Studio.app` | Same wrapper structure |
+| Linux (x64) | `dist/OrionStudio/` | Directory with launcher script |
+
+## Extension Architecture
+
+### orion-launcher Extension
+
+The primary custom extension providing the welcome wizard and setup features.
+
+**Activation:** `onStartupFinished` - runs after VS Code fully loads
+
+**Features:**
+
+- Welcome wizard for first-time setup
+- Remote SSH connection to analysis clusters
+- Git repository cloning and branch checkout
+- Project template selection
+
+**Technology:**
+
+- TypeScript compiled to JavaScript
+- VS Code Webview API for wizard UI
+- `simple-git` library for git operations
+
+### Bundled Marketplace Extensions
+
+Defined in `config/extensions.txt`:
+
+```
+ms-vscode-remote.remote-ssh      # Remote development
+ms-toolsai.jupyter               # Jupyter notebook support
+ms-python.python                 # Python language support
+ms-python.vscode-pylance         # Python IntelliSense
+GitHub.copilot                   # AI coding assistant
+tamasfe.even-better-toml         # TOML file support
 ```
 
-### 2. Pixi Environment Manager
-**Location:** Status bar + auto-detection
-**Functionality:**
-- Detect pixi.toml in workspace root
-- Show environment status (not installed / installed / outdated)
-- Quick action buttons: "Install Environment", "Update Environment", "Use System Python"
-- Integration with Jupyter kernel picker
-- Progress indicator during pixi operations
+Extensions can be excluded using `# !extension.id` syntax for incompatible versions.
 
-**Implementation:**
-```typescript
-// src/vs/orion/node/pixiService.ts
-export class PixiService {
-  detectPixiManifest(): boolean
-  getEnvironmentStatus(): PixiEnvStatus
-  installEnvironment(): Promise<void>
-  listAvailableEnvironments(): string[]
-}
+## Portable Mode
+
+Orion Studio runs in "portable mode" where all user data is stored alongside the application:
+
+**macOS Structure:**
+
+```
+Orion Studio.app/
+└── Contents/
+    ├── MacOS/OrionStudio          # Launcher script
+    ├── Info.plist
+    └── Resources/
+        ├── Visual Studio Code.app/ # Embedded VS Code
+        └── code-portable-data/     # User data
+            ├── user-data/User/settings.json
+            └── extensions/         # Installed extensions
 ```
 
-### 3. ORNL LDAP/SSH Authentication
-**Location:** Startup authentication screen
-**Functionality:**
-- Custom authentication provider
-- LDAP authentication against ORNL directory
-- SSH key validation (alternative)
-- Remember credentials (secure storage)
-- Offline mode for authenticated users
+**Linux Structure:**
 
-**Implementation:**
-```typescript
-// src/vs/orion/node/ldapService.ts
-export class OrnlAuthenticationProvider implements AuthenticationProvider {
-  authenticate(username: string, password: string): Promise<boolean>
-  validateSshKey(): Promise<boolean>
-  getToken(): string
-}
+```
+OrionStudio/
+├── OrionStudio                    # Launcher script
+├── bin/code                       # VS Code binary
+├── resources/app/extensions/      # Built-in extensions
+└── data/                          # Portable data
+    ├── user-data/User/settings.json
+    └── extensions/                # User extensions
 ```
 
-### 4. Neutron Imaging Tools Extension
-**Separate Extension (easier to update independently)**
-- Analysis function library for notebooks
-- Custom visualizations for neutron data
-- Notebook templates for common workflows
-- Data import/export utilities
-- Integration with ORNL data systems
+## Default Configuration
 
-## Technical Stack
+The `config/settings.json` provides sensible defaults:
 
-### Languages
-- **TypeScript** - Core VSCode codebase
-- **JavaScript** - Extension code, build scripts
-- **Python** - Neutron analysis libraries (bundled with pixi)
-- **HTML/CSS** - Custom UI components (webviews)
-- **Shell** - Build and deployment scripts
-
-### Key Dependencies
-- **Electron** - Desktop application framework
-- **Monaco Editor** - Code editor (built into VSCode)
-- **Node.js** - Runtime and build tools
-- **Yarn** - Package management
-- **Gulp** - Build system
-
-### VSCode Extension APIs Used
-- **Authentication API** - Custom LDAP provider
-- **Webview API** - Custom UI panels
-- **Commands API** - Custom toolbar buttons
-- **Status Bar API** - Pixi environment indicator
-- **File System API** - Git operations
-- **Terminal API** - Execute pixi/git commands
-
-## Branding Configuration
-
-### product.json Key Fields
 ```json
 {
-  "nameShort": "Orion Studio",
-  "nameLong": "Orion Studio",
-  "applicationName": "orion-studio",
-  "dataFolderName": ".orion-studio",
-  "win32MutexName": "orionstudio",
-  "licenseName": "MIT",
-  "licenseUrl": "https://github.com/ornlneutronimaging/orion/blob/main/LICENSE",
-  "extensionsGallery": {
-    "serviceUrl": "https://marketplace.visualstudio.com/_apis/public/gallery",
-    "itemUrl": "https://marketplace.visualstudio.com/items"
-  },
-  "extensionEnabledApiProposals": {
-    "neutron-imaging": ["authentication"]
-  }
+  "workbench.startupEditor": "none",
+  "workbench.colorTheme": "Default Dark+",
+  "editor.fontSize": 14,
+  "terminal.integrated.fontSize": 13,
+  "python.defaultInterpreterPath": "python",
+  "jupyter.askForKernelRestart": false
 }
 ```
 
-## Build Process
+## Technology Stack
 
-### 1. Initial Fork Setup
-```bash
-# Clone VSCodium (which tracks VSCode)
-git clone https://github.com/VSCodium/vscodium.git
-cd vscodium
+### Build Tools
 
-# Create our custom branch
-git checkout -b ornl/orion-studio
+- **Python 3.11** - Build script language
+- **Node.js 22.x** - Extension compilation
+- **Pixi** - Environment management
 
-# Add our custom code
-mkdir -p vscode/src/vs/orion
-```
+### Runtime
 
-### 2. Development Build
-```bash
-# Install dependencies
-yarn install
+- **Electron** - VS Code's desktop framework (bundled with VS Code)
+- **VS Code Extension API** - Custom extension development
 
-# Build for development
-yarn gulp vscode-linux-x64-min
+### CI/CD
 
-# Run in development mode
-./VSCode-linux-x64/code-oss
-```
-
-### 3. Production Build
-```bash
-# Full optimized build
-yarn gulp vscode-linux-x64
-
-# Package as AppImage
-./scripts/package-linux.sh
-```
-
-### 4. Continuous Integration
-- GitHub Actions for automated builds
-- Build on: push to main, tags, pull requests
-- Artifacts: Linux (DEB, RPM, AppImage), Windows (MSI), macOS (DMG)
-
-## Extension Marketplace Strategy
-
-### Use Existing VSCode Marketplace
-**Pros:**
-- Access to 40,000+ extensions
-- No need to host our own marketplace
-- Users can install Python, Git, Docker extensions, etc.
-
-**Configuration:**
-Keep Microsoft's extensionsGallery URLs in product.json (like VSCodium does)
-
-### Custom Extensions
-Ship pre-installed:
-1. **ms-toolsai.jupyter** - Official Jupyter extension
-2. **continue.continue** - AI coding with OpenRouter
-3. **neutron-imaging** - Our custom tooling
-
-Users can install additional extensions from marketplace as needed.
-
-## Deployment Strategy
-
-### Package Formats
-- **Linux:** DEB (Ubuntu/Debian), RPM (RHEL/CentOS), AppImage (universal)
-- **Windows:** MSI installer (if needed)
-- **macOS:** DMG (if needed)
-
-### Distribution Channels
-1. Internal ORNL package repository
-2. GitHub Releases (public or private repo)
-3. Shared network location (/SNS/software/orion-studio/)
-4. Auto-update mechanism (download from GitHub releases)
-
-### Installation Experience
-```bash
-# User downloads installer
-wget https://github.com/ornlneutronimaging/orion/releases/latest/orion-studio.AppImage
-
-# Make executable
-chmod +x orion-studio.AppImage
-
-# First run
-./orion-studio.AppImage
-# Shows: LDAP authentication screen
-# After auth: Opens with default workspace or workspace picker
-```
-
-### Updates
-- Check for updates on startup
-- Auto-download and prompt to install
-- Or: Use system package manager (apt, yum)
-
-## Notebook Workflow Integration
-
-### User Journey
-
-1. **Launch Application**
-   - Desktop icon: "Orion Studio"
-   - Splash screen with ORNL branding
-   - Authentication prompt (LDAP or SSH key)
-
-2. **First-Time Workspace Setup**
-   - Prompt: "Choose notebook repository"
-   - Options:
-     - Clone from GitHub (default ORNL repo)
-     - Open existing folder
-     - Start with empty workspace
-   - Auto-detect pixi.toml → prompt to install environment
-
-3. **Daily Workflow**
-   - Open studio → auto-opens last workspace
-   - Status bar shows:
-     - Current notebook version (git branch/tag)
-     - Pixi environment status
-     - Jupyter kernel status
-   - Toolbar buttons:
-     - 📚 Switch Notebook Version
-     - 🐍 Manage Python Environment
-     - 🔄 Sync with Repository
-
-4. **Switching Notebook Versions**
-   - Click "Switch Version" button
-   - Dropdown shows:
-     - ✓ v2.1.0 (current)
-     - v2.0.0
-     - v1.9.1
-     - develop (latest)
-   - Select version → git checkout → reload
-
-5. **Environment Management**
-   - Auto-detect pixi.toml changes (via file watcher)
-   - Prompt: "Environment definition changed. Update?"
-   - Click "Update" → runs pixi install
-   - Progress shown in terminal panel
-
-### Git Integration Behavior
-
-**Branch Strategy:**
-- `main` - Stable notebook templates (read-only for most users)
-- `develop` - Latest development notebooks (opt-in)
-- `user/username` - Personal modifications (encouraged)
-
-**User Modifications:**
-- Warn before checking out if uncommitted changes
-- Offer: "Stash changes", "Commit changes", "Discard changes"
-- Never lose user work
+- **GitHub Actions** - Automated builds
+- **Pixi** - Reproducible CI environment
 
 ## Security Considerations
 
-### LDAP Authentication
-- Credentials stored in OS keychain (encrypted)
-- Token-based session (expires after 24 hours)
-- Optional: Remember me (store token securely)
+### Extension Installation
 
-### SSH Key Authentication
-- Check for ~/.ssh/id_rsa or configured key
-- Validate against ORNL authentication server
-- No password storage required
+- Extensions downloaded directly from official VS Code Marketplace
+- HTTPS with SSL verification (disabled in dev for some environments)
+- No code execution during install (just file extraction)
+
+### Portable Mode
+
+- All data stored in application bundle
+- No writes to system directories
+- User can delete app to remove all traces
 
 ### Network Security
-- All git operations over HTTPS or SSH
-- Optional: Use ORNL VPN requirement check
-- Extension marketplace over HTTPS
 
-### Code Execution
-- Jupyter kernels run in isolated pixi environments
-- No elevated privileges required
-- Notebooks run with user permissions only
+- All downloads over HTTPS
+- Git operations via SSH or HTTPS
 
-## Testing Strategy
-
-### Unit Tests
-- Jest for TypeScript code
-- Test: Git service, Pixi service, LDAP service
-- Mock external dependencies
-
-### Integration Tests
-- Test: Toolbar buttons trigger correct actions
-- Test: Authentication flow
-- Test: Environment detection and installation
-
-### End-to-End Tests
-- Playwright for UI testing
-- Test: Complete user workflows
-- Test: On Linux VM (CI)
-
-### User Acceptance Testing
-- Beta program with neutron imaging users
-- Collect feedback on UX
-- Iterate on custom features
-
-## Maintenance Plan
-
-### Upstream Sync Strategy
-- Track VSCodium releases (they track VSCode)
-- Quarterly updates (not every VSCode release)
-- Test custom features after each merge
-- Automated tests catch regressions
-
-### Versioning
-- Semantic versioning: MAJOR.MINOR.PATCH
-- MAJOR: VSCode version update (e.g., 1.90 → 1.91)
-- MINOR: New custom features
-- PATCH: Bug fixes
-
-### Support
-- GitHub Issues for bug reports
-- Internal Slack channel for users
-- Documentation wiki
-- Video tutorials for common tasks
-
-## Success Metrics
-
-### Adoption
-- Number of active users
-- Number of notebooks opened per week
-- Reduction in support tickets (vs old JupyterLab)
-
-### Stability
-- Crash reports (telemetry opt-in)
-- Time to complete common tasks
-- User satisfaction surveys
-
-### Maintenance
-- Time to merge upstream updates
-- Number of custom feature bugs
-- Community contributions (if open-source)
-
-## Open Source Strategy
-
-### License
-- Fork inherits MIT license (from VSCode/VSCodium)
-- Custom extensions: MIT or Apache 2.0
-- Clear attribution to Microsoft and VSCodium
-
-### Repository
-- Public or Private?
-  - **Public:** Community contributions, transparency
-  - **Private:** ORNL-specific features, security
-- Recommendation: Public repo with private ORNL-specific extensions
-
-### Community
-- Accept pull requests for bug fixes
-- Feature requests via GitHub Issues
-- Monthly releases with changelog
-
-## Future Enhancements (Post-MVP)
+## Future Enhancements
 
 ### Phase 2 Features
-- **Cloud Sync:** Sync workspace settings across machines
-- **Collaboration:** Real-time notebook collaboration (like Google Docs)
-- **Remote Compute:** Run notebooks on ORNL compute cluster
-- **Data Browser:** Built-in neutron data file browser
-- **Custom Themes:** Neutron imaging specific color schemes
+
+- **Pixi Integration**: Auto-detect and install pixi environments
+- **Notebook Templates**: Pre-built analysis workflows
+- **Custom Visualizations**: Neutron data viewers
 
 ### Phase 3 Features
-- **Web Version:** Browser-based version (using code-server approach)
-- **Mobile Viewer:** iOS/Android app for viewing notebooks
-- **Integration with Analysis Pipeline:** Submit jobs to beamline DAQ
-- **Instrument Status:** Real-time beamline status in IDE
 
-## Cost Analysis (Revised with AI Assistance)
+- **Remote Compute**: Submit jobs to ORNL clusters
+- **Data Browser**: Browse neutron data archives
+- **Collaboration**: Shared notebook sessions
 
-### Initial Development (8 weeks)
-- Lead Developer (with Claude AI): 8 weeks @ 40 hrs/week = 320 hours
-  - At ORNL rates: ~$25,000 (including overhead)
-- Infrastructure setup: $2,000
-- Testing environment: $1,000
-- **Total: ~$28,000**
+## Maintenance
 
-### Ongoing Maintenance (Annual)
-- Quarterly upstream merges: 40 hours/quarter × 4 = 160 hours/year
-- Bug fixes and user support: 10 hours/month × 12 = 120 hours/year
-- Feature additions: 80 hours/year
-- **Total: ~360 hours/year = $18,000/year**
+### Updating VS Code
 
-### Cost Savings vs Current System
-- **Reduced support tickets:** Browser JupyterLab issues eliminated
-- **Reduced training time:** Familiar IDE interface
-- **Reduced dependency conflicts:** Pixi isolation
-- **Reduced notebook corruption:** Git version control
+The build script automatically fetches the latest stable VS Code. No manual intervention needed.
 
-**Estimated ROI:** Break-even in 18-24 months if supporting 20+ users
+### Updating Extensions
 
-## Conclusion
+Edit `config/extensions.txt` and rebuild. Use `@version` syntax to pin specific versions.
 
-This architecture provides:
-✅ Best Jupyter notebook experience (native VSCode API)
-✅ Custom UI for neutron imaging workflows
-✅ LDAP/SSH authentication integration
-✅ Pixi environment automation
-✅ Access to full VSCode extension ecosystem
-✅ Professional, maintainable codebase
-✅ Clear path for future enhancements
+### Adding New Extensions
 
-**Next Steps:** See ROADMAP.md for phased implementation plan
+1. Add extension ID to `config/extensions.txt`
+2. Run `pixi run build`
+3. Extension and its dependencies are automatically installed
+
+## Comparison to Alternatives
+
+| Feature | Orion Studio | VS Code | JupyterLab | Cursor |
+|---------|--------------|---------|------------|--------|
+| Jupyter Support | Bundled | Extension | Native | Extension |
+| Git Integration | Bundled | Extension | Extension | Bundled |
+| Portable Mode | Yes | Manual | No | No |
+| ORNL Customization | Yes | No | No | No |
+| Build Complexity | Low | N/A | N/A | High |
+| Maintenance | Low | N/A | Medium | High |
+
+## Resources
+
+- **VS Code Extension API:** <https://code.visualstudio.com/api>
+- **VS Code Marketplace API:** <https://github.com/nicholasberlin/vscode-marketplace>
+- **Pixi Documentation:** <https://prefix.dev/docs/pixi>
