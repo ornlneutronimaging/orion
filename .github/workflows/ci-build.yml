@@ -66,7 +66,7 @@ jobs:
 
       - name: Upload Artifact (macOS DMG)
         if: matrix.os == 'macos-latest'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: OrionStudio-macOS
           path: dist/OrionStudio-macOS.dmg
@@ -74,7 +74,7 @@ jobs:
 
       - name: Upload Artifact (Linux tarball)
         if: matrix.os == 'ubuntu-latest'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: OrionStudio-linux
           path: dist/OrionStudio-linux.tar.gz
