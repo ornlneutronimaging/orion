@@ -13,6 +13,7 @@ import stat
 # Configuration
 # Configuration
 APP_NAME = "OrionStudio"
+FALLBACK_VSCODE_VERSION = "1.106.3"
 CONFIG_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "config")
 BUILD_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "build")
 DIST_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "dist")
@@ -37,9 +38,8 @@ def get_latest_version():
     except Exception as e:
         print(f"Failed to fetch latest version: {e}")
         # Fallback to a known recent version if API fails
-        fallback = "1.106.3"
-        print(f"Falling back to version {fallback}")
-        return fallback
+        print(f"Falling back to version {FALLBACK_VSCODE_VERSION}")
+        return FALLBACK_VSCODE_VERSION
 
 def get_download_url():
     version = get_latest_version()
@@ -145,8 +145,7 @@ def install_extensions(install_dir, data_dir):
     # Copy to extensions directory
     # For macOS: Orion Studio.app/Contents/Resources/app/extensions/orion-launcher
     # For Linux: OrionStudio/resources/app/extensions/orion-launcher
-    # WAIT: Standard VS Code extensions go into ~/.vscode/extensions OR we can bundle them.
-    # To bundle them as "built-in", we need to put them in resources/app/extensions.
+    # Strategy: Bundle as "built-in" by placing in resources/app/extensions.
     
     if system == "Darwin":
         target_ext_dir = os.path.join(install_dir, "Visual Studio Code.app", "Contents", "Resources", "app", "extensions", "orion-launcher")

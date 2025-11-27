@@ -128,6 +128,7 @@ export class OrionWizardPanel {
             cancellable: false
         }, async (progress) => {
             const { runSetup } = await import('./extension');
+            // Cast config to any to avoid type issues with dynamic import
             const success = await runSetup(config, progress);
 
             if (success) {
@@ -136,7 +137,7 @@ export class OrionWizardPanel {
                     let uri: vscode.Uri;
                     if (vscode.env.remoteName) {
                         // Construct remote URI
-                        // Cast to any to avoid type error with older definitions
+                        // Use 'as any' to access remoteAuthority if not in type definitions, or check if it exists on env
                         const authority = (vscode.env as any).remoteAuthority;
                         if (authority) {
                             uri = vscode.Uri.from({

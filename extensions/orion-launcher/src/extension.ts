@@ -6,6 +6,14 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
 
+export interface OrionConfig {
+    mode: 'EXISTING' | 'CLONE';
+    targetDir: string;
+    branchName?: string;
+    enableCopilot?: boolean;
+    setupDate?: string;
+}
+
 export function activate(context: vscode.ExtensionContext) {
     console.log('Orion Launcher is active');
 
@@ -39,7 +47,7 @@ async function checkConfigAndLaunch(context: vscode.ExtensionContext) {
         console.log('Orion config found at ' + configPath);
 
         try {
-            const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+            const config: OrionConfig = JSON.parse(fs.readFileSync(configPath, 'utf8'));
 
             // If we are not in the target workspace, open it
             if (config.targetDir) {
@@ -64,8 +72,10 @@ async function checkConfigAndLaunch(context: vscode.ExtensionContext) {
     }
 }
 
-export async function runSetup(config: any, progress: vscode.Progress<{ message?: string; increment?: number }>) {
+export async function runSetup(config: OrionConfig, progress: vscode.Progress<{ message?: string; increment?: number }>) {
     const isRemote = !!vscode.env.remoteName;
+    // Default repository URL
+    const DEFAULT_REPO_URL = "https://github.com/neutronimaging/python_notebooks";
 
     if (isRemote) {
         // Remote Execution via Terminal
@@ -81,11 +91,11 @@ export async function runSetup(config: any, progress: vscode.Progress<{ message?
 
         if (config.mode === 'CLONE') {
             send(`echo "Cloning repository..."`);
-            // TODO: Make repo configurable
-            const repoUrl = "https://github.com/neutronimaging/python_notebooks";
+            const repoUrl = DEFAULT_REPO_URL;
+
             // Robust Clone Logic:
             // 1. If dir doesn't exist OR is empty -> Clone
-            // 2. If dir exists and is a git repo -> Skip
+            // 2. If dir exists and is a valid git repo -> Skip
             // 3. Otherwise -> Warn/Fail
             const cloneCmd = `if [ ! -d "${config.targetDir}" ] || [ -z "$(ls -A "${config.targetDir}")" ]; then git clone "${repoUrl}" "${config.targetDir}"; elif git -C "${config.targetDir}" rev-parse --is-inside-work-tree >/dev/null 2>&1; then echo "Directory exists and is a valid git repository. Skipping clone."; else echo "Error: Target directory exists, is not empty, and is not a git repository."; fi`;
             send(cloneCmd);
@@ -123,8 +133,7 @@ export async function runSetup(config: any, progress: vscode.Progress<{ message?
         try {
             if (config.mode === 'CLONE') {
                 progress.report({ message: 'Cloning repository...' });
-                // TODO: Make repo configurable or constant
-                const repoUrl = "https://github.com/neutronimaging/python_notebooks";
+                const repoUrl = DEFAULT_REPO_URL;
                 await gitService.clone(repoUrl, config.targetDir, config.branchName);
             }
 
@@ -150,4 +159,3 @@ export async function runSetup(config: any, progress: vscode.Progress<{ message?
     }
 }
 
-export function deactivate() { }

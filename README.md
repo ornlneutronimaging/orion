@@ -1,8 +1,10 @@
 # Orion Studio
 
-**A Custom VSCode IDE for Neutron Imaging at ORNL**
+**A Custom VSCode Environment for Neutron Imaging at ORNL**
 
-Orion Studio is a specialized fork of VSCode/VSCodium, purpose-built for neutron imaging workflows at Oak Ridge National Laboratory's MARS (HFIR) and VENUS (SNS) beamlines. Similar to how Cursor customized VSCode for AI development, Orion Studio provides an integrated development environment tailored for neutron data analysis.
+Orion Studio is a specialized distribution of Visual Studio Code, purpose-built for neutron imaging workflows at Oak Ridge National Laboratory's MARS (HFIR) and VENUS (SNS) beamlines.
+
+Unlike a traditional fork, Orion Studio is built as a **custom wrapper** around the official VS Code distribution. It bundles a set of curated extensions, settings, and a custom launcher wizard (`orion-launcher`) to provide a seamless "out-of-the-box" experience for neutron scientists.
 
 ## Why Orion Studio?
 
@@ -14,173 +16,88 @@ Traditional notebook environments (JupyterLab in browsers) present challenges:
 
 **Orion Studio solves these problems by providing:**
 - Native desktop application with full IDE capabilities
-- Git-based notebook version selector (toolbar button)
-- Automated Python environment management (pixi integration)
-- ORNL LDAP/SSH authentication
-- Access to 40,000+ VSCode extensions
-- Custom neutron imaging analysis tools
+- **Orion Launcher**: A custom wizard for easy setup, remote connection, and project cloning
+- **Pixi Integration**: Automated Python environment management
+- **Remote Development**: Seamless SSH connection to analysis clusters
+- **Curated Extensions**: Pre-installed tools for Jupyter, Python, and Neutron Imaging
 
 ## Key Features
 
 ### 🎯 Core Capabilities
 - **Native Jupyter Notebooks**: Full-featured notebook interface built on VSCode's excellent Jupyter extension
-- **Git Version Control**: Switch between notebook versions via toolbar dropdown (branches/tags)
+- **Git Version Control**: Integrated git support for notebook versioning
 - **Pixi Environment Manager**: Auto-detect and manage Python environments from `pixi.toml`
-- **ORNL Authentication**: Integrated LDAP/SSH authentication on startup
-- **Extension Ecosystem**: Access to entire VSCode marketplace
+- **Remote Connection Wizard**: Simplified connection to ORNL analysis clusters (e.g., `analysis.sns.gov`)
 
 ### 🔬 Neutron Imaging Tools
 - Pre-configured for neutron radiography and tomography workflows
 - Custom visualization tools for neutron data
 - Analysis templates and snippets
-- Integration with ORNL beamline systems (MARS/VENUS)
-
-### 🤖 AI-Powered Development
-- Continue.dev integration with OpenRouter
-- Context-aware code completion
-- Analysis workflow suggestions
 
 ## Project Status
 
-**Current Phase:** Initial repository setup (Phase 0)
+**Current Phase:** Initial Development (Phase 1)
 
-See [ROADMAP.md](docs/ROADMAP.md) for the complete 8-week development plan.
+See [ROADMAP.md](docs/ROADMAP.md) for the complete development plan.
 
 ## Documentation
 
-- **[ARCHITECTURE.md](docs/ARCHITECTURE.md)** - Complete system architecture, technical stack, and implementation details
-- **[ROADMAP.md](docs/ROADMAP.md)** - 8-week phased development plan with daily tasks
-- **[QUICKSTART.md](docs/QUICKSTART.md)** - Developer setup guide for building VSCode forks
+- **[ARCHITECTURE.md](docs/ARCHITECTURE.md)** - Complete system architecture
+- **[ROADMAP.md](docs/ROADMAP.md)** - Development plan
 
 ## Quick Start (for Developers)
 
-```bash
-# Prerequisites: Node.js 18+, Python 3.8+, build tools
+To build Orion Studio locally, you need Python 3 and Node.js installed.
 
-# Clone VSCodium
-git clone https://github.com/VSCodium/vscodium.git
-cd vscodium
+1.  **Clone the repository:**
+    ```bash
+    git clone https://github.com/ornlneutronimaging/orion.git
+    cd orion
+    ```
 
-# Download VSCode source
-./get_repo.sh
+2.  **Build the Application:**
+    The build script downloads the latest stable VS Code, builds the `orion-launcher` extension, and bundles everything into a standalone application.
+    ```bash
+    python3 scripts/build_orion.py
+    ```
 
-# Build
-cd vscode
-yarn install
-yarn gulp vscode-linux-x64-min
-
-# Run
-./scripts/code.sh
-```
-
-For detailed instructions, see [QUICKSTART.md](docs/QUICKSTART.md).
+3.  **Run Orion Studio:**
+    - **macOS**: Open `dist/Orion Studio.app`
+    - **Linux**: Run `dist/OrionStudio/OrionStudio`
 
 ## Architecture Overview
 
 ```
-orion-studio/
-├── vscode/                    # VSCodium fork
-│   └── src/vs/orion/         # Custom code namespace
-│       ├── browser/          # UI components
-│       │   ├── notebookVersionSelector/
-│       │   ├── pixiEnvironmentManager/
-│       │   └── authenticationProvider/
-│       └── node/             # Backend services
-│           ├── gitService.ts
-│           ├── pixiService.ts
-│           └── ldapService.ts
-├── extensions/               # Pre-bundled extensions
-│   ├── ms-toolsai.jupyter/
-│   ├── continue.continue/
-│   └── neutron-imaging/
-├── resources/                # Branding assets
-└── scripts/                  # Build and deployment
+orion/
+├── extensions/               # Custom Extensions
+│   └── orion-launcher/       # The "Welcome Wizard" extension
+├── scripts/                  # Build and deployment scripts
+│   └── build_orion.py        # Main build script (Python)
+├── config/                   # Default settings and extension lists
+│   ├── settings.json         # Default VS Code settings
+│   └── extensions.txt        # List of extensions to bundle
+└── resources/                # Branding assets
 ```
 
 ## Technology Stack
 
-- **Base:** VSCode/VSCodium (TypeScript/JavaScript)
-- **Framework:** Electron (desktop application)
-- **Build Tools:** Node.js, Yarn, Gulp
-- **Languages:** TypeScript (core), JavaScript (extensions), Python (analysis)
-- **Editor:** Monaco Editor (built into VSCode)
+- **Base:** Visual Studio Code (Official Build)
+- **Wrapper:** Python (Build Script)
+- **Launcher Extension:** TypeScript (VS Code Extension API)
+- **Environment Management:** Pixi
 
 ## Target Users
 
 - Neutron imaging scientists at ORNL's MARS (HFIR) and VENUS (SNS) beamlines
 - Researchers working with radiography and tomography data
 - Data analysts processing neutron imaging experiments
-- Students and educators in neutron science
-
-## Development Timeline
-
-| Phase | Duration | Deliverable |
-|-------|----------|-------------|
-| Phase 0 | Week 1 | VSCodium fork with Orion branding |
-| Phase 1 | Week 2-3 | Core services (Git, Pixi) |
-| Phase 2 | Week 4 | Notebook version selector |
-| Phase 3 | Week 5 | Pixi environment manager |
-| Phase 4 | Week 6 | LDAP authentication |
-| Phase 5 | Week 7 | Extension bundling |
-| Phase 6 | Week 7-8 | Packaging & distribution |
-| Phase 7 | Week 9+ | Launch & maintenance |
-
-**Estimated Cost:** $28,000 initial development + $18,000/year maintenance
-
-## Success Metrics
-
-- **Adoption:** 50%+ of neutron imaging users within 3 months
-- **Support:** <2 tickets per week
-- **Stability:** Zero data loss incidents
-- **Satisfaction:** >4/5 user rating
-
-## Installation (Coming Soon)
-
-Once released, installation will be straightforward:
-
-```bash
-# Linux AppImage
-wget https://github.com/ornlneutronimaging/orion/releases/latest/orion-studio.AppImage
-chmod +x orion-studio.AppImage
-./orion-studio.AppImage
-
-# Or use package managers
-# DEB: sudo dpkg -i orion-studio_*.deb
-# RPM: sudo rpm -i orion-studio-*.rpm
-```
-
-## Contributing
-
-This project is currently in initial development. Contribution guidelines will be added as the project matures.
-
-For now, developers interested in contributing should:
-1. Review the [ARCHITECTURE.md](docs/ARCHITECTURE.md) document
-2. Check the [ROADMAP.md](docs/ROADMAP.md) for current phase
-3. Join the development discussion (channels TBD)
 
 ## License
 
 MIT License - See [LICENSE](LICENSE) for details
 
-Orion Studio is built on the foundation of:
-- Visual Studio Code (Microsoft Corporation) - MIT License
-- VSCodium (VSCodium maintainers) - MIT License
-
-## Acknowledgments
-
-- **Microsoft** - for creating and open-sourcing Visual Studio Code
-- **VSCodium Team** - for maintaining a telemetry-free VSCode build
-- **ORNL Neutron Sciences Directorate** - for supporting this development
-- **MARS (HFIR) and VENUS (SNS) beamline teams** - for requirements and testing
+Orion Studio bundles Visual Studio Code, which is subject to the [Microsoft Software License Terms](https://code.visualstudio.com/license).
 
 ## Contact & Support
 
 - **Issues:** [GitHub Issues](https://github.com/ornlneutronimaging/orion/issues)
-- **Discussions:** (Coming soon)
-- **Documentation:** [docs/](docs/)
-
----
-
-**Project Status:** 🚧 Under active development
-
-See [ROADMAP.md](docs/ROADMAP.md) for current progress and upcoming milestones.

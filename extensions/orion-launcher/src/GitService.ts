@@ -4,7 +4,7 @@ import * as path from 'path';
 
 export class GitService {
 
-    public async clone(repoUrl: string, targetDir: string, branchName?: string, progressCallback?: (progress: number) => void): Promise<void> {
+    public async clone(repoUrl: string, targetDir: string, branchName?: string): Promise<void> {
         // 1. Check if directory exists
         if (fs.existsSync(targetDir)) {
             const files = fs.readdirSync(targetDir);
