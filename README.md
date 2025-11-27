@@ -46,30 +46,44 @@ See [ROADMAP.md](docs/ROADMAP.md) for the complete development plan.
 
 ## Documentation
 
+- **[QUICKSTART.md](docs/QUICKSTART.md)** - Detailed developer guide
 - **[ARCHITECTURE.md](docs/ARCHITECTURE.md)** - Complete system architecture
 - **[ROADMAP.md](docs/ROADMAP.md)** - Development plan
+- **[BRANDING.md](docs/BRANDING.md)** - Icon design rationale
+- **[CHANGELOG.md](CHANGELOG.md)** - Release history
 
 ## Quick Start (for Developers)
 
-To build Orion Studio locally, you need Python 3 and Node.js installed.
+### Prerequisites
 
-1. **Clone the repository:**
+Install [Pixi](https://pixi.sh) - it manages all dependencies (Python, Node.js) automatically:
 
-    ```bash
-    git clone https://github.com/ornlneutronimaging/orion.git
-    cd orion
-    ```
+```bash
+# macOS/Linux
+curl -fsSL https://pixi.sh/install.sh | bash
 
-2. **Build the Application:**
-    The build script downloads the latest stable VS Code, builds the `orion-launcher` extension, and bundles everything into a standalone application.
+# Windows
+iwr -useb https://pixi.sh/install.ps1 | iex
+```
 
-    ```bash
-    python3 scripts/build_orion.py
-    ```
+### Build & Run
 
-3. **Run Orion Studio:**
-    - **macOS**: Open `dist/Orion Studio.app`
-    - **Linux**: Run `dist/OrionStudio/OrionStudio`
+```bash
+# Clone the repository
+git clone https://github.com/ornlneutronimaging/orion.git
+cd orion
+
+# Build Orion Studio
+pixi run build
+
+# Run Orion Studio
+# macOS:
+open "dist/Orion Studio.app"
+# Linux:
+./dist/OrionStudio/OrionStudio
+```
+
+The build script downloads VS Code, compiles the orion-launcher extension, installs bundled extensions, and creates platform-specific installers (DMG for macOS, tarball for Linux).
 
 ## Architecture Overview
 

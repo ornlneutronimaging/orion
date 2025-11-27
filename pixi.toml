@@ -3,7 +3,7 @@ authors = ["Chen Zhang <chenzhang8722@gmail.com>"]
 channels = ["conda-forge"]
 name = "orion"
 platforms = ["osx-arm64", "linux-64"]
-version = "0.1.0"
+version = "1.0.0"
 
 [tasks]
 build = "python scripts/build_orion.py"
