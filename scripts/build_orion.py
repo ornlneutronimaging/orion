@@ -164,6 +164,76 @@ def generate_icons(output_dir):
     return None
 
 
+def create_dmg(app_path, output_path, volume_name="Orion Studio"):
+    """Create a compressed DMG installer with drag-and-drop interface for macOS.
+
+    Args:
+        app_path: Path to the .app bundle
+        output_path: Path for the output .dmg file
+        volume_name: Name shown when DMG is mounted
+    """
+    print(f"Creating DMG installer: {output_path}...")
+
+    with tempfile.TemporaryDirectory() as staging_dir:
+        # Create staging directory with app and Applications symlink
+        staged_app = os.path.join(staging_dir, os.path.basename(app_path))
+        shutil.copytree(app_path, staged_app, symlinks=True)
+
+        # Create symlink to /Applications for drag-and-drop install
+        applications_link = os.path.join(staging_dir, "Applications")
+        os.symlink("/Applications", applications_link)
+
+        # Remove existing DMG if present
+        if os.path.exists(output_path):
+            os.remove(output_path)
+
+        # Create compressed DMG directly (UDZO = zlib compressed, good compatibility)
+        # Using -format UDZO skips the need for a temp writable DMG
+        subprocess.run(
+            [
+                "hdiutil",
+                "create",
+                "-volname",
+                volume_name,
+                "-srcfolder",
+                staging_dir,
+                "-ov",
+                "-format",
+                "UDZO",  # zlib compressed (universal compatibility)
+                "-imagekey",
+                "zlib-level=9",  # Maximum compression
+                output_path,
+            ],
+            check=True,
+        )
+
+    final_size = os.path.getsize(output_path) / (1024 * 1024)
+    print(f"  Created {output_path} ({final_size:.1f} MB)")
+    return output_path
+
+
+def create_tarball(source_dir, output_path):
+    """Create a compressed tarball for Linux distribution.
+
+    Args:
+        source_dir: Directory to compress
+        output_path: Path for the output .tar.gz file
+    """
+    print(f"Creating compressed tarball: {output_path}...")
+
+    # Remove existing if present
+    if os.path.exists(output_path):
+        os.remove(output_path)
+
+    # Use maximum gzip compression
+    with tarfile.open(output_path, "w:gz", compresslevel=9) as tar:
+        tar.add(source_dir, arcname=os.path.basename(source_dir))
+
+    final_size = os.path.getsize(output_path) / (1024 * 1024)
+    print(f"  Created {output_path} ({final_size:.1f} MB)")
+    return output_path
+
+
 def setup_portable_mode(install_dir):
     print("Setting up Portable Mode...")
     system = platform.system()
@@ -601,7 +671,12 @@ def main():
         # install_extensions expects the PARENT directory of "Visual Studio Code.app"
         install_extensions(resources_dir, data_dir)
 
+        # 6. Create DMG installer
+        dmg_path = os.path.join(DIST_DIR, "OrionStudio-macOS.dmg")
+        create_dmg(wrapper_app, dmg_path)
+
         print(f"Build complete! Orion Studio.app is located at: {wrapper_app}")
+        print(f"DMG installer: {dmg_path}")
         return  # End of macOS build
 
     elif system == "Linux":
@@ -657,7 +732,12 @@ StartupWMClass=Code
     # Install Extensions
     install_extensions(orion_dir, data_dir)
 
+    # Create compressed tarball for Linux
+    tarball_path = os.path.join(DIST_DIR, "OrionStudio-linux.tar.gz")
+    create_tarball(orion_dir, tarball_path)
+
     print(f"Build complete! Orion Studio is located at: {orion_dir}")
+    print(f"Tarball: {tarball_path}")
 
 
 if __name__ == "__main__":

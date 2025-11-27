@@ -43,34 +43,39 @@ jobs:
       - name: Verify Build Output
         run: |
           if [ "${{ matrix.os }}" == "macos-latest" ]; then
-            if [ -d "dist/Orion Studio.app" ]; then
+            if [ -d "dist/Orion Studio.app" ] && [ -f "dist/OrionStudio-macOS.dmg" ]; then
                echo "✅ Build successful: dist/Orion Studio.app exists"
+               echo "✅ DMG created: dist/OrionStudio-macOS.dmg"
+               ls -lh dist/OrionStudio-macOS.dmg
             else
-               echo "❌ Build failed: dist/Orion Studio.app not found"
+               echo "❌ Build failed: dist/Orion Studio.app or DMG not found"
+               ls -la dist/
                exit 1
             fi
           else
-            if [ -d "dist/OrionStudio" ]; then
+            if [ -d "dist/OrionStudio" ] && [ -f "dist/OrionStudio-linux.tar.gz" ]; then
               echo "✅ Build successful: dist/OrionStudio exists"
+              echo "✅ Tarball created: dist/OrionStudio-linux.tar.gz"
+              ls -lh dist/OrionStudio-linux.tar.gz
             else
-              echo "❌ Build failed: dist/OrionStudio not found"
+              echo "❌ Build failed: dist/OrionStudio or tarball not found"
+              ls -la dist/
               exit 1
             fi
           fi
 
-      - name: Compress Build Output
-        run: |
-          cd dist
-          if [ "${{ matrix.os }}" == "macos-latest" ]; then
-            GZIP=-9 tar -czf OrionStudio-${{ matrix.os }}.tar.gz "Orion Studio.app"
-          else
-            GZIP=-9 tar -czf OrionStudio-${{ matrix.os }}.tar.gz OrionStudio/
-          fi
-          echo "✅ Compression complete: dist/OrionStudio-${{ matrix.os }}.tar.gz"
-
-      - name: Upload Artifact
+      - name: Upload Artifact (macOS DMG)
+        if: matrix.os == 'macos-latest'
         uses: actions/upload-artifact@v4
         with:
-          name: OrionStudio-${{ matrix.os }}
-          path: dist/OrionStudio-${{ matrix.os }}.tar.gz
+          name: OrionStudio-macOS
+          path: dist/OrionStudio-macOS.dmg
+          retention-days: 5
+
+      - name: Upload Artifact (Linux tarball)
+        if: matrix.os == 'ubuntu-latest'
+        uses: actions/upload-artifact@v4
+        with:
+          name: OrionStudio-linux
+          path: dist/OrionStudio-linux.tar.gz
           retention-days: 5
