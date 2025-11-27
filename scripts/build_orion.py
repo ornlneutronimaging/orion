@@ -5,12 +5,15 @@ import shutil
 import ssl
 import subprocess
 import tarfile
+import tempfile
 import urllib.request
 import zipfile
 
-# Configuration
+import cairosvg
+
 # Configuration
 APP_NAME = "OrionStudio"
+RESOURCES_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "resources")
 FALLBACK_VSCODE_VERSION = "1.106.3"
 CONFIG_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "config")
 BUILD_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "build")
@@ -92,6 +95,73 @@ def clear_quarantine(app_path):
             subprocess.run(["xattr", "-cr", app_path], check=True)
         except subprocess.CalledProcessError as e:
             print(f"Warning: Failed to clear quarantine: {e}")
+
+
+def generate_icons(output_dir):
+    """Generate platform-specific icons from SVG source.
+
+    Args:
+        output_dir: Directory to place the generated icon files
+
+    Returns:
+        Path to the generated icon file (icns on macOS, png on Linux)
+    """
+    svg_path = os.path.join(RESOURCES_DIR, "icons", "orion-icon.svg")
+    if not os.path.exists(svg_path):
+        print(f"Warning: Icon source not found at {svg_path}")
+        return None
+
+    print("Generating app icons from SVG...")
+    system = platform.system()
+
+    if system == "Darwin":
+        # macOS: Generate iconset and convert to .icns
+        with tempfile.TemporaryDirectory() as iconset_dir:
+            iconset_path = os.path.join(iconset_dir, "AppIcon.iconset")
+            os.makedirs(iconset_path)
+
+            # Required sizes for macOS iconset
+            sizes = [
+                (16, "icon_16x16.png"),
+                (32, "icon_16x16@2x.png"),
+                (32, "icon_32x32.png"),
+                (64, "icon_32x32@2x.png"),
+                (128, "icon_128x128.png"),
+                (256, "icon_128x128@2x.png"),
+                (256, "icon_256x256.png"),
+                (512, "icon_256x256@2x.png"),
+                (512, "icon_512x512.png"),
+                (1024, "icon_512x512@2x.png"),
+            ]
+
+            for size, filename in sizes:
+                output_path = os.path.join(iconset_path, filename)
+                cairosvg.svg2png(url=svg_path, write_to=output_path, output_width=size, output_height=size)
+
+            # Convert iconset to icns using iconutil
+            icns_path = os.path.join(output_dir, "AppIcon.icns")
+            subprocess.run(["iconutil", "-c", "icns", iconset_path, "-o", icns_path], check=True)
+            print(f"  Created {icns_path}")
+            return icns_path
+
+    elif system == "Linux":
+        # Linux: Generate PNG icons for .desktop file
+        # Standard sizes for Linux icons
+        icon_sizes = [16, 32, 48, 64, 128, 256, 512]
+        icons_dir = os.path.join(output_dir, "icons")
+        os.makedirs(icons_dir, exist_ok=True)
+
+        for size in icon_sizes:
+            output_path = os.path.join(icons_dir, f"orion-studio-{size}.png")
+            cairosvg.svg2png(url=svg_path, write_to=output_path, output_width=size, output_height=size)
+
+        # Also create a default icon.png at 256px
+        default_icon = os.path.join(output_dir, "orion-studio.png")
+        cairosvg.svg2png(url=svg_path, write_to=default_icon, output_width=256, output_height=256)
+        print(f"  Created icons in {icons_dir}")
+        return default_icon
+
+    return None
 
 
 def setup_portable_mode(install_dir):
@@ -443,6 +513,9 @@ def main():
         os.makedirs(macos_dir)
         os.makedirs(resources_dir)
 
+        # Generate app icon from SVG
+        generate_icons(resources_dir)
+
         # 1. Install the Launcher Script
         launcher_src = os.path.join(os.path.dirname(__file__), "launch_orion.sh")
         launcher_dest = os.path.join(macos_dir, "OrionStudio")  # Main executable name
@@ -552,6 +625,31 @@ def main():
         launcher_dest = os.path.join(orion_dir, "OrionStudio")  # No extension for cleaner look
         shutil.copy(launcher_src, launcher_dest)
         os.chmod(launcher_dest, 0o755)
+
+        # Generate icons for Linux
+        generate_icons(orion_dir)
+
+        # Create .desktop file for Linux application menu
+        desktop_content = """[Desktop Entry]
+Name=Orion Studio
+Comment=Scientific Computing IDE for ORNL Neutron Imaging
+Exec={exec_path}
+Icon={icon_path}
+Terminal=false
+Type=Application
+Categories=Development;IDE;Science;
+StartupWMClass=Code
+"""
+        desktop_file = os.path.join(orion_dir, "orion-studio.desktop")
+        with open(desktop_file, "w") as f:
+            f.write(
+                desktop_content.format(
+                    exec_path=os.path.join(orion_dir, "OrionStudio"),
+                    icon_path=os.path.join(orion_dir, "orion-studio.png"),
+                )
+            )
+        os.chmod(desktop_file, 0o755)
+        print(f"Created {desktop_file}")
 
     # Now setup portable mode in the final location
     data_dir = setup_portable_mode(orion_dir)

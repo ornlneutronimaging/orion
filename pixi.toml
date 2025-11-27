@@ -17,3 +17,4 @@ nodejs = "22.*"     # VSCode expects Node 22.x
 python = "3.11.*"   # Stable Python version (3.14 is too new)
 pre-commit = ">=3.8"
 ruff = ">=0.8"
+cairosvg = ">=2.8.2,<3"
