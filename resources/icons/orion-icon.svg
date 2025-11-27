@@ -1,0 +1,66 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+<defs>
+<linearGradient id="gloss_overlay" x1="256" y1="0" x2="256" y2="512" gradientUnits="userSpaceOnUse">
+<stop offset="0" stop-color="#FFFFFF" stop-opacity="0.4"/>
+<stop offset="0.5" stop-color="#FFFFFF" stop-opacity="0.1"/>
+<stop offset="1" stop-color="#FFFFFF" stop-opacity="0.05"/>
+</linearGradient>
+
+<radialGradient id="bg_gradient" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(256 256) rotate(90) scale(256)">
+<stop stop-color="#00454D"/> <stop offset="1" stop-color="#373A36"/> </radialGradient>
+
+<radialGradient id="spark_glow_large" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(256 256) scale(100)">
+<stop stop-color="#FE5000"/> <stop offset="1" stop-color="#FE5000" stop-opacity="0"/>
+</radialGradient>
+
+<radialGradient id="energy_glow_large" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(256 256) scale(80)">
+<stop stop-color="#7DBA00"/> <stop offset="1" stop-color="#7DBA00" stop-opacity="0"/>
+</radialGradient>
+
+<filter id="soft_glow" x="-50%" y="-50%" width="200%" height="200%">
+<feGaussianBlur stdDeviation="8" result="coloredBlur"/>
+<feMerge>
+<feMergeNode in="coloredBlur"/>
+<feMergeNode in="SourceGraphic"/>
+</feMerge>
+</filter>
+
+<filter id="strong_glow" x="-50%" y="-50%" width="200%" height="200%">
+<feGaussianBlur stdDeviation="12" result="coloredBlur"/>
+<feMerge>
+<feMergeNode in="coloredBlur"/>
+<feMergeNode in="SourceGraphic"/>
+</feMerge>
+</filter>
+</defs>
+
+<rect x="24" y="24" width="464" height="464" rx="96" fill="url(#bg_gradient)"/>
+<rect x="24" y="24" width="464" height="464" rx="96" stroke="#005776" stroke-width="2" fill="none"/>
+
+<g opacity="0.15" stroke="#00BDB5" stroke-width="1" fill="none">
+<circle cx="256" cy="256" r="60"/>
+<circle cx="256" cy="256" r="80"/>
+<circle cx="256" cy="256" r="100"/>
+<circle cx="256" cy="256" r="120"/>
+<circle cx="256" cy="256" r="140"/>
+<circle cx="256" cy="256" r="160"/>
+</g>
+
+<path d="M96 96 L200 256 M416 96 L312 232 M96 416 L200 256 M416 416 L312 232" stroke="#00BDB5" stroke-width="2" opacity="0.5"/>
+
+<g filter="url(#soft_glow)">
+<circle cx="96" cy="96" r="12" fill="#FF9E1B"/> <circle cx="416" cy="96" r="12" fill="#00BDB5"/> <circle cx="96" cy="416" r="12" fill="#00BDB5"/> <circle cx="416" cy="416" r="12" fill="#00BDB5"/> </g>
+
+<path d="M 40 320 C 120 280, 200 256, 230 256 L 256 450 L 282 256 C 310 256, 400 160, 472 112" stroke="#7DBA00" stroke-width="6" stroke-linecap="round" fill="none" filter="url(#soft_glow)"/>
+
+<g>
+<circle cx="200" cy="256" r="50" fill="url(#energy_glow_large)" opacity="0.5"/>
+<circle cx="200" cy="256" r="22" fill="#7DBA00" filter="url(#strong_glow)"/>
+<circle cx="256" cy="256" r="65" fill="url(#spark_glow_large)" opacity="0.7"/>
+<circle cx="256" cy="256" r="28" fill="#FE5000" filter="url(#strong_glow)"/>
+<circle cx="312" cy="232" r="50" fill="url(#energy_glow_large)" opacity="0.5"/>
+<circle cx="312" cy="232" r="22" fill="#7DBA00" filter="url(#strong_glow)"/>
+</g>
+
+<path d="M24 120 C24 66.9807 66.9807 24 120 24 L392 24 C445.019 24 488 66.9807 488 120 L488 230 C488 230 256 200 24 230 L24 120 Z" fill="url(#gloss_overlay)"/>
+</svg>
