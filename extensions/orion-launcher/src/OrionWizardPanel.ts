@@ -108,7 +108,7 @@ export class OrionWizardPanel {
 
   private async _saveConfig(config: any) {
     const homeDir = os.homedir();
-    const orionDir = path.join(homeDir, ".orion");
+    const orionDir = path.join(homeDir, ".orion-studio");
     if (!fs.existsSync(orionDir)) {
       fs.mkdirSync(orionDir);
     }

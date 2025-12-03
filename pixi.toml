@@ -8,7 +8,7 @@ version = "1.0.0"
 [tasks]
 build = "python scripts/build_orion.py"
 clean = "rm -rf build dist"
-clean_config = "rm -rf ~/.orion"
+clean_config = "rm -rf ~/.orion-studio"
 lint = "pre-commit run --all-files"
 lint-install = "pre-commit install"
 

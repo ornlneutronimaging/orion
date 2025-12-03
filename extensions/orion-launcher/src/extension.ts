@@ -41,7 +41,7 @@ export function activate(context: vscode.ExtensionContext) {
 
 async function checkConfigAndLaunch(context: vscode.ExtensionContext) {
   const homeDir = os.homedir();
-  const configPath = path.join(homeDir, ".orion", "config.json");
+  const configPath = path.join(homeDir, ".orion-studio", "config.json");
 
   if (!fs.existsSync(configPath)) {
     // No config, show wizard
