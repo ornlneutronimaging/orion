@@ -5,6 +5,7 @@ ms-python.vscode-pylance
 ms-python.debugpy
 GitHub.copilot
 tamasfe.even-better-toml
+h5web.vscode-h5web
 
 # Excluded dependencies (incompatible versions):
 # !GitHub.copilot-chat
