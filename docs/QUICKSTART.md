@@ -71,6 +71,24 @@ open "dist/Orion Studio.app"
 
 You should see VS Code launch with the Orion Launcher wizard.
 
+## First Launch: Express vs Advanced Setup
+
+When Orion Studio launches for the first time, you'll see two options:
+
+### Express Setup (Recommended for most users)
+
+- One click to get started
+- Clones notebooks to `~/orion_notebooks`
+- Uses shallow clone for faster download (no git history)
+- Automatically runs `pixi install` to set up the environment
+
+### Advanced Setup
+
+- Choose a custom location for notebooks
+- Select or create a git branch
+- Configure remote SSH connections to analysis clusters
+- Full control over setup options
+
 ## Development Workflow
 
 ### Making Changes
@@ -309,12 +327,20 @@ pixi run clean
 pixi run build
 ```
 
+### Notebook asks to install Jupyter extension
+
+**Cause:** In rare cases, VS Code may prompt to install the Jupyter extension even though it's bundled
+
+**Fix:** Click "Install" when prompted - it will recognize the extension is already present. If the issue persists, restart Orion Studio.
+
 ## Testing Checklist
 
 After building, verify:
 
 - [ ] Application launches without errors
 - [ ] Orion Launcher wizard appears on first run
+- [ ] Express Setup button works and clones to `~/orion_notebooks`
+- [ ] Advanced Setup flow allows custom configuration
 - [ ] Can open a folder/workspace
 - [ ] Jupyter extension works (create `.ipynb` file)
 - [ ] Python extension works (syntax highlighting)

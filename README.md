@@ -27,6 +27,7 @@ Traditional notebook environments (JupyterLab in browsers) present challenges:
 
 ### 🎯 Core Capabilities
 
+- **Express Setup**: One-click setup for new users - clones notebooks and configures everything automatically
 - **Native Jupyter Notebooks**: Full-featured notebook interface built on VSCode's excellent Jupyter extension
 - **Git Version Control**: Integrated git support for notebook versioning
 - **Pixi Environment Manager**: Auto-detect and manage Python environments from `pixi.toml`

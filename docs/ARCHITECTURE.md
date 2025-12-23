@@ -93,9 +93,10 @@ The primary custom extension providing the welcome wizard and setup features.
 
 **Features:**
 
-- Welcome wizard for first-time setup
+- **Express Setup**: One-click setup that clones notebooks to `~/orion_notebooks` with shallow clone
+- **Advanced Setup**: Full wizard for custom location, branch selection, and remote SSH
 - Remote SSH connection to analysis clusters
-- Git repository cloning and branch checkout
+- Git repository cloning with optional shallow clone support
 - Project template selection
 
 **Technology:**

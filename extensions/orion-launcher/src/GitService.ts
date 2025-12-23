@@ -7,7 +7,14 @@ export class GitService {
     repoUrl: string,
     targetDir: string,
     branchName?: string,
+    shallow?: boolean,
   ): Promise<void> {
+    // Build clone options
+    const cloneOptions = ["--progress"];
+    if (shallow) {
+      cloneOptions.push("--depth", "1");
+    }
+
     // 1. Check if directory exists
     if (fs.existsSync(targetDir)) {
       const files = fs.readdirSync(targetDir);
@@ -41,13 +48,13 @@ export class GitService {
       } else {
         // Directory is empty, safe to clone
         const git = simpleGit.simpleGit();
-        await git.clone(repoUrl, targetDir, ["--progress"]);
+        await git.clone(repoUrl, targetDir, cloneOptions);
       }
     } else {
       // Directory doesn't exist, create and clone
       fs.mkdirSync(targetDir, { recursive: true });
       const git = simpleGit.simpleGit();
-      await git.clone(repoUrl, targetDir, ["--progress"]);
+      await git.clone(repoUrl, targetDir, cloneOptions);
     }
 
     // 2. Checkout Branch

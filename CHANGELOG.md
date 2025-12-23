@@ -5,6 +5,17 @@ All notable changes to Orion Studio will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- **Express Setup**: One-click setup option for new users
+  - Clones notebooks to `~/orion_notebooks`
+  - Uses shallow clone for faster downloads
+  - Automatically runs `pixi install` to configure environment
+- **Shallow clone support**: GitService now supports `--depth 1` cloning for faster repository downloads
+- **H5Web extension**: Added h5web.vscode-h5web for HDF5 file visualization
+
 ## [1.0.0] - 2024-11-27
 
 ### Added

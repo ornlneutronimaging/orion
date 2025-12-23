@@ -7,12 +7,23 @@ import * as path from "path";
 import * as os from "os";
 
 export interface OrionConfig {
-  mode: "EXISTING" | "CLONE";
+  mode: "EXISTING" | "CLONE" | "EXPRESS";
   targetDir: string;
   branchName?: string;
   enableCopilot?: boolean;
   setupDate?: string;
+  shallow?: boolean;
 }
+
+// Express setup configuration - fast clone with no history
+const DEFAULT_REPO_URL = "https://github.com/neutronimaging/python_notebooks";
+const EXPRESS_CONFIG: OrionConfig = {
+  mode: "EXPRESS",
+  targetDir: path.join(os.homedir(), "orion_notebooks"),
+  shallow: true,
+  branchName: undefined,
+  enableCopilot: false,
+};
 
 export function activate(context: vscode.ExtensionContext) {
   console.log("Orion Launcher is active");
@@ -85,8 +96,6 @@ export async function runSetup(
   progress: vscode.Progress<{ message?: string; increment?: number }>,
 ) {
   const isRemote = !!vscode.env.remoteName;
-  // Default repository URL
-  const DEFAULT_REPO_URL = "https://github.com/neutronimaging/python_notebooks";
 
   if (isRemote) {
     // Remote Execution via Terminal
@@ -147,10 +156,19 @@ export async function runSetup(
     const pixiService = new PixiService();
 
     try {
-      if (config.mode === "CLONE") {
-        progress.report({ message: "Cloning repository..." });
-        const repoUrl = DEFAULT_REPO_URL;
-        await gitService.clone(repoUrl, config.targetDir, config.branchName);
+      if (config.mode === "CLONE" || config.mode === "EXPRESS") {
+        const isExpress = config.mode === "EXPRESS";
+        progress.report({
+          message: isExpress
+            ? "Cloning notebooks (express mode)..."
+            : "Cloning repository...",
+        });
+        await gitService.clone(
+          DEFAULT_REPO_URL,
+          config.targetDir,
+          config.branchName,
+          config.shallow,
+        );
       }
 
       progress.report({ message: "Checking Pixi..." });
@@ -175,4 +193,45 @@ export async function runSetup(
       return false;
     }
   }
+}
+
+/**
+ * Express setup - one-click setup with sensible defaults.
+ * Uses shallow clone for faster download and skips branch selection.
+ */
+export async function runExpressSetup(): Promise<boolean> {
+  const config: OrionConfig = {
+    ...EXPRESS_CONFIG,
+    setupDate: new Date().toISOString(),
+  };
+
+  // Save config first
+  const orionDir = path.join(os.homedir(), ".orion-studio");
+  if (!fs.existsSync(orionDir)) {
+    fs.mkdirSync(orionDir, { recursive: true });
+  }
+  const configPath = path.join(orionDir, "config.json");
+  fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
+
+  // Run setup with progress
+  const success = await vscode.window.withProgress(
+    {
+      location: vscode.ProgressLocation.Notification,
+      title: "Express Setup",
+      cancellable: false,
+    },
+    async (progress) => {
+      return await runSetup(config, progress);
+    },
+  );
+
+  if (success) {
+    vscode.window.showInformationMessage(
+      "Express setup complete! Opening workspace...",
+    );
+    const uri = vscode.Uri.file(config.targetDir);
+    await vscode.commands.executeCommand("vscode.openFolder", uri);
+  }
+
+  return success;
 }

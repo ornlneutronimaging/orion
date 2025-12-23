@@ -52,10 +52,15 @@ export class OrionWizardPanel {
 
     // Handle messages from the webview
     this._panel.webview.onDidReceiveMessage(
-      (message) => {
+      async (message) => {
         switch (message.command) {
           case "alert":
             vscode.window.showErrorMessage(message.text);
+            return;
+          case "expressSetup":
+            this.dispose();
+            const { runExpressSetup } = await import("./extension");
+            await runExpressSetup();
             return;
           case "saveConfig":
             this._saveConfig(message.config);
@@ -200,6 +205,7 @@ export class OrionWizardPanel {
                     body { font-family: var(--vscode-font-family); padding: 20px; color: var(--vscode-editor-foreground); background-color: var(--vscode-editor-background); }
                     .container { max-width: 600px; margin: 0 auto; }
                     h1 { text-align: center; }
+                    h2 { margin-bottom: 8px; }
                     .step { display: none; }
                     .step.active { display: block; }
                     .btn {
@@ -225,16 +231,90 @@ export class OrionWizardPanel {
                     .radio-group { margin-bottom: 15px; }
                     .radio-group label { display: flex; align-items: center; gap: 10px; cursor: pointer; padding: 5px; }
                     .radio-group label:hover { background-color: var(--vscode-list-hoverBackground); }
+
+                    /* Express/Advanced setup styles */
+                    .setup-section {
+                        border: 1px solid var(--vscode-panel-border);
+                        border-radius: 6px;
+                        padding: 20px;
+                        margin-bottom: 15px;
+                    }
+                    .setup-section p {
+                        margin: 0 0 15px 0;
+                        opacity: 0.8;
+                        font-size: 0.95em;
+                    }
+                    .setup-section .btn { margin-bottom: 0; }
+                    .express-section {
+                        border-color: var(--vscode-button-background);
+                        background-color: color-mix(in srgb, var(--vscode-button-background) 10%, transparent);
+                    }
+                    .divider {
+                        text-align: center;
+                        margin: 20px 0;
+                        opacity: 0.6;
+                        font-size: 0.9em;
+                    }
+                    .loading-overlay {
+                        display: none;
+                        position: fixed;
+                        top: 0; left: 0; right: 0; bottom: 0;
+                        background: rgba(0,0,0,0.7);
+                        justify-content: center;
+                        align-items: center;
+                        flex-direction: column;
+                        z-index: 1000;
+                    }
+                    .loading-overlay.active { display: flex; }
+                    .spinner {
+                        width: 40px; height: 40px;
+                        border: 3px solid var(--vscode-editor-foreground);
+                        border-top-color: transparent;
+                        border-radius: 50%;
+                        animation: spin 1s linear infinite;
+                        margin-bottom: 15px;
+                    }
+                    @keyframes spin { to { transform: rotate(360deg); } }
                 </style>
 			</head>
 			<body>
+                <!-- Loading Overlay -->
+                <div id="loading-overlay" class="loading-overlay">
+                    <div class="spinner"></div>
+                    <div>Setting up Orion Studio...</div>
+                </div>
+
                 <div class="container">
                     <!-- Step 1: Welcome -->
                     <div id="step-1" class="step">
                         <h1>Welcome to ORION Studio</h1>
+
+                        <div class="setup-section express-section">
+                            <h2>Express Setup</h2>
+                            <p>Get started in seconds. Clones notebooks to ~/orion_notebooks</p>
+                            <button id="express-btn" class="btn" onclick="startExpressSetup()">
+                                Start Express Setup
+                            </button>
+                        </div>
+
+                        <div class="divider">— or —</div>
+
+                        <div class="setup-section">
+                            <h2>Advanced Setup</h2>
+                            <p>Choose location, branch, or connect to remote cluster</p>
+                            <button class="btn btn-secondary" onclick="nextStep('advanced')">
+                                Configure Manually
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Step Advanced: Local or Remote -->
+                    <div id="step-advanced" class="step">
+                        <h1>Setup Mode</h1>
                         <p style="text-align: center; margin-bottom: 30px;">Select your working mode:</p>
                         <button class="btn" onclick="nextStep(2)">Data Reduction Locally</button>
                         <button class="btn btn-secondary" onclick="nextStep('remote')">Connect to Analysis Cluster</button>
+                        <button class="btn btn-secondary" onclick="prevStep(1)" style="margin-top: 10px;">Back</button>
                     </div>
 
                     <!-- Step Remote: Host Selection -->
@@ -269,7 +349,7 @@ export class OrionWizardPanel {
                         </div>
 
                         <button class="btn" onclick="connectRemote()">Connect</button>
-                        <button class="btn btn-secondary" onclick="prevStep(1)">Back</button>
+                        <button class="btn btn-secondary" onclick="prevStep('advanced')">Back</button>
                     </div>
 
                     <!-- Step 2: Action -->
@@ -278,7 +358,7 @@ export class OrionWizardPanel {
                         <p id="remote-indicator" style="text-align: center; color: var(--vscode-descriptionForeground); display: none;">Connected to Remote Environment</p>
                         <button class="btn" onclick="setMode('EXISTING'); nextStep(3)">Open Existing Notebooks</button>
                         <button class="btn" onclick="setMode('CLONE'); nextStep(3)">Clone Fresh Copy</button>
-                        <button class="btn btn-secondary" onclick="prevStep(1)" id="back-to-welcome">Back</button>
+                        <button class="btn btn-secondary" onclick="prevStep('advanced')" id="back-to-welcome">Back</button>
                     </div>
 
                     <!-- Step 3: Configuration -->
@@ -327,6 +407,14 @@ export class OrionWizardPanel {
                         document.getElementById('targetDir').placeholder = "Enter absolute path (e.g. /SNS/users/...)";
                     } else {
                         document.getElementById('step-1').classList.add('active');
+                    }
+
+                    function startExpressSetup() {
+                        // Show loading overlay
+                        document.getElementById('loading-overlay').classList.add('active');
+                        document.getElementById('express-btn').disabled = true;
+                        // Send message to extension
+                        vscode.postMessage({ command: 'expressSetup' });
                     }
 
                     function nextStep(step) {
