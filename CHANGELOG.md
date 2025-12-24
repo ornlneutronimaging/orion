@@ -7,14 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [1.1.0] - 2024-12-23
 
+### Changed
+
+- **Express Setup refactored for fresh-start workflow**
+  - Every launch shows welcome wizard (no session restore)
+  - Existing repos: fetches latest, force checkouts default branch, creates new session branch
+  - Fresh clones: uses full clone (not shallow) for reliable git operations
+  - Session branches named `${USER}-session-YYYYMMDD-HHMMSS` for history tracking
+- UI updated: prominent "Start" button, "Advanced Setup" as secondary option
+- Added `window.restoreWindows: none` to prevent VS Code session restore
+
 ### Added
 
-- **Express Setup**: One-click setup option for new users
-  - Clones notebooks to `~/orion_notebooks`
-  - Uses shallow clone for faster downloads
-  - Automatically runs `pixi install` to configure environment
-- **Shallow clone support**: GitService now supports `--depth 1` cloning for faster repository downloads
-- **H5Web extension**: Added h5web.vscode-h5web for HDF5 file visualization
+- `GitService.refreshRepository()` - refresh existing repo to latest and create session branch
+- `GitService.getDefaultBranch()` - detect default branch (next/main/master)
+- H5Web extension for HDF5 file visualization
 
 ## [1.0.0] - 2024-11-27
 

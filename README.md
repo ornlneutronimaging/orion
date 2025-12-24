@@ -27,7 +27,10 @@ Traditional notebook environments (JupyterLab in browsers) present challenges:
 
 ### 🎯 Core Capabilities
 
-- **Express Setup**: One-click setup for new users - clones notebooks and configures everything automatically
+- **Express Setup**: One-click fresh start for every session
+  - First launch: clones notebooks to `~/orion_notebooks`
+  - Subsequent launches: refreshes to latest and creates a new session branch
+  - Your renamed/custom notebooks are preserved (only tracked files are reset)
 - **Native Jupyter Notebooks**: Full-featured notebook interface built on VSCode's excellent Jupyter extension
 - **Git Version Control**: Integrated git support for notebook versioning
 - **Pixi Environment Manager**: Auto-detect and manage Python environments from `pixi.toml`

@@ -73,19 +73,31 @@ You should see VS Code launch with the Orion Launcher wizard.
 
 ## First Launch: Express vs Advanced Setup
 
-When Orion Studio launches for the first time, you'll see two options:
+When Orion Studio launches, you'll see the welcome wizard with two options:
 
 ### Express Setup (Recommended for most users)
 
-- One click to get started
+Click **Start** for a fresh-start experience:
+
+**First time:**
 - Clones notebooks to `~/orion_notebooks`
-- Uses shallow clone for faster download (no git history)
-- Automatically runs `pixi install` to set up the environment
+- Creates a session branch: `${USER}-session-YYYYMMDD-HHMMSS`
+- Runs `pixi install` to set up the Python environment
+
+**Subsequent launches:**
+- Fetches latest changes from the repository
+- Resets tracked files to match the latest version
+- Creates a new session branch for this session
+- **Your renamed/custom files are preserved** (untracked files are not touched)
+
+This workflow ensures you always start with the latest notebooks while preserving any custom work you've saved with different filenames.
 
 ### Advanced Setup
 
+Click **Advanced Setup →** for more control:
+
 - Choose a custom location for notebooks
-- Select or create a git branch
+- Select or create a specific git branch
 - Configure remote SSH connections to analysis clusters
 - Full control over setup options
 
@@ -338,8 +350,11 @@ pixi run build
 After building, verify:
 
 - [ ] Application launches without errors
-- [ ] Orion Launcher wizard appears on first run
-- [ ] Express Setup button works and clones to `~/orion_notebooks`
+- [ ] Orion Launcher wizard appears on launch (not inside orion_notebooks workspace)
+- [ ] Express Setup "Start" button works:
+  - First run: clones to `~/orion_notebooks` and creates session branch
+  - Subsequent runs: refreshes repo and creates new session branch
+- [ ] Wizard does NOT appear when already in orion_notebooks workspace
 - [ ] Advanced Setup flow allows custom configuration
 - [ ] Can open a folder/workspace
 - [ ] Jupyter extension works (create `.ipynb` file)
