@@ -7,6 +7,7 @@
   "update.mode": "manual",
   "extensions.autoUpdate": true,
   "window.title": "Orion Studio",
+  "window.restoreWindows": "none",
   "remote.SSH.showLoginTerminal": true,
   "remote.SSH.useLocalServer": false,
   "workbench.activityBar.visible": false,

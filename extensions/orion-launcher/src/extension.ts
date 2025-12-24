@@ -5,6 +5,8 @@ import { PixiService } from "./PixiService";
 import * as fs from "fs";
 import * as path from "path";
 import * as os from "os";
+import * as process from "process";
+import * as simpleGit from "simple-git";
 
 export interface OrionConfig {
   mode: "EXISTING" | "CLONE" | "EXPRESS";
@@ -15,15 +17,9 @@ export interface OrionConfig {
   shallow?: boolean;
 }
 
-// Express setup configuration - fast clone with no history
+// Express setup configuration
 const DEFAULT_REPO_URL = "https://github.com/neutronimaging/python_notebooks";
-const EXPRESS_CONFIG: OrionConfig = {
-  mode: "EXPRESS",
-  targetDir: path.join(os.homedir(), "orion_notebooks"),
-  shallow: true,
-  branchName: undefined,
-  enableCopilot: false,
-};
+const EXPRESS_TARGET_DIR = path.join(os.homedir(), "orion_notebooks");
 
 export function activate(context: vscode.ExtensionContext) {
   console.log("Orion Launcher is active");
@@ -51,44 +47,15 @@ export function activate(context: vscode.ExtensionContext) {
 }
 
 async function checkConfigAndLaunch(context: vscode.ExtensionContext) {
-  const homeDir = os.homedir();
-  const configPath = path.join(homeDir, ".orion-studio", "config.json");
-
-  if (!fs.existsSync(configPath)) {
-    // No config, show wizard
-    OrionWizardPanel.createOrShow(context.extensionUri);
-  } else {
-    console.log("Orion config found at " + configPath);
-
-    try {
-      const config: OrionConfig = JSON.parse(
-        fs.readFileSync(configPath, "utf8"),
-      );
-
-      // If we are not in the target workspace, open it
-      if (config.targetDir) {
-        const currentFolder =
-          vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
-        if (currentFolder !== config.targetDir) {
-          if (fs.existsSync(config.targetDir)) {
-            const uri = vscode.Uri.file(config.targetDir);
-            vscode.commands.executeCommand("vscode.openFolder", uri);
-          } else {
-            console.log(
-              `Target directory ${config.targetDir} does not exist. Starting wizard.`,
-            );
-            OrionWizardPanel.createOrShow(context.extensionUri);
-          }
-        }
-      } else {
-        // No target dir in config, show wizard
-        OrionWizardPanel.createOrShow(context.extensionUri);
-      }
-    } catch (e) {
-      console.error("Failed to read config", e);
-      OrionWizardPanel.createOrShow(context.extensionUri);
-    }
+  // Skip wizard if already in an Orion workspace
+  const currentFolder = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
+  if (currentFolder && currentFolder.includes("orion_notebooks")) {
+    console.log("Already in Orion workspace, skipping wizard");
+    return;
   }
+
+  // Show wizard - let user choose Express or Advanced
+  OrionWizardPanel.createOrShow(context.extensionUri);
 }
 
 export async function runSetup(
@@ -197,41 +164,106 @@ export async function runSetup(
 
 /**
  * Express setup - one-click setup with sensible defaults.
- * Uses shallow clone for faster download and skips branch selection.
+ * If repo exists: refresh to latest and create new session branch.
+ * If first time: full clone and create session branch.
  */
 export async function runExpressSetup(): Promise<boolean> {
-  const config: OrionConfig = {
-    ...EXPRESS_CONFIG,
-    setupDate: new Date().toISOString(),
-  };
+  const targetDir = EXPRESS_TARGET_DIR;
+  const repoUrl = DEFAULT_REPO_URL;
 
-  // Save config first
+  return vscode.window.withProgress(
+    {
+      location: vscode.ProgressLocation.Notification,
+      title: "Orion Express Setup",
+      cancellable: false,
+    },
+    async (progress) => {
+      try {
+        const gitService = new GitService();
+        const pixiService = new PixiService();
+        let branchName: string;
+
+        const repoExists = fs.existsSync(path.join(targetDir, ".git"));
+
+        if (repoExists) {
+          // Existing repo: refresh and create new session branch
+          progress.report({ message: "Refreshing notebooks to latest..." });
+          branchName = await gitService.refreshRepository(targetDir);
+          progress.report({
+            message: `Created session branch: ${branchName}`,
+          });
+        } else {
+          // First time: clone (full, not shallow)
+          progress.report({
+            message:
+              "First time setup - cloning notebooks (this may take a moment)...",
+          });
+          await gitService.clone(repoUrl, targetDir);
+
+          // Create session branch after clone
+          const username = process.env.USER || process.env.USERNAME || "user";
+          const timestamp = new Date()
+            .toISOString()
+            .replace(/[-:]/g, "")
+            .replace("T", "-")
+            .slice(0, 15);
+          branchName = `${username}-session-${timestamp}`;
+
+          const git = simpleGit.simpleGit({ baseDir: targetDir });
+          await git.checkoutLocalBranch(branchName);
+        }
+
+        // Install/update pixi environment
+        progress.report({ message: "Checking Pixi installation..." });
+        await pixiService.checkAndInstall();
+
+        progress.report({ message: "Setting up Python environment..." });
+        try {
+          await pixiService.runInstall(targetDir);
+        } catch (e) {
+          // Warn but proceed
+          vscode.window.showWarningMessage(
+            `Pixi environment setup failed: ${e}. Proceeding to open workspace...`,
+          );
+          console.warn("Pixi install failed", e);
+        }
+
+        // Save config for logging/debugging
+        const config: OrionConfig = {
+          mode: "EXPRESS",
+          targetDir,
+          branchName,
+          setupDate: new Date().toISOString(),
+        };
+        await saveConfig(config);
+
+        // Open workspace
+        progress.report({ message: "Opening workspace..." });
+        vscode.window.showInformationMessage(
+          `Express setup complete! Session branch: ${branchName}`,
+        );
+        const uri = vscode.Uri.file(targetDir);
+        await vscode.commands.executeCommand("vscode.openFolder", uri, false);
+
+        return true;
+      } catch (error) {
+        vscode.window.showErrorMessage(
+          `Express setup failed: ${error instanceof Error ? error.message : String(error)}`,
+        );
+        return false;
+      }
+    },
+  );
+}
+
+/**
+ * Save Orion configuration to ~/.orion-studio/config.json
+ */
+async function saveConfig(config: OrionConfig): Promise<void> {
   const orionDir = path.join(os.homedir(), ".orion-studio");
   if (!fs.existsSync(orionDir)) {
     fs.mkdirSync(orionDir, { recursive: true });
   }
   const configPath = path.join(orionDir, "config.json");
   fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
-
-  // Run setup with progress
-  const success = await vscode.window.withProgress(
-    {
-      location: vscode.ProgressLocation.Notification,
-      title: "Express Setup",
-      cancellable: false,
-    },
-    async (progress) => {
-      return await runSetup(config, progress);
-    },
-  );
-
-  if (success) {
-    vscode.window.showInformationMessage(
-      "Express setup complete! Opening workspace...",
-    );
-    const uri = vscode.Uri.file(config.targetDir);
-    await vscode.commands.executeCommand("vscode.openFolder", uri);
-  }
-
-  return success;
 }

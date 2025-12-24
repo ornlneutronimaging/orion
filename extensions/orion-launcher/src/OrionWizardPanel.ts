@@ -220,6 +220,39 @@ export class OrionWizardPanel {
                     .btn-secondary { background-color: var(--vscode-button-secondaryBackground); color: var(--vscode-button-secondaryForeground); }
                     .btn-secondary:hover { background-color: var(--vscode-button-secondaryHoverBackground); }
 
+                    /* Primary large button for Express setup */
+                    .btn-primary-large {
+                        background-color: var(--vscode-button-background);
+                        color: var(--vscode-button-foreground);
+                        border: none;
+                        padding: 18px 40px;
+                        cursor: pointer;
+                        font-size: 1.4em;
+                        font-weight: 600;
+                        border-radius: 6px;
+                        display: inline-flex;
+                        align-items: center;
+                        justify-content: center;
+                        gap: 8px;
+                    }
+                    .btn-primary-large:hover { background-color: var(--vscode-button-hoverBackground); }
+                    .btn-primary-large:disabled { opacity: 0.5; cursor: not-allowed; }
+
+                    /* Link-style button for Advanced setup */
+                    .btn-link {
+                        background: none;
+                        border: none;
+                        color: var(--vscode-textLink-foreground);
+                        cursor: pointer;
+                        font-size: 1em;
+                        padding: 8px 0;
+                        text-decoration: none;
+                    }
+                    .btn-link:hover {
+                        color: var(--vscode-textLink-activeForeground);
+                        text-decoration: underline;
+                    }
+
                     .input-group { margin-bottom: 15px; }
                     label { display: block; margin-bottom: 5px; }
                     input[type="text"] {
@@ -232,7 +265,42 @@ export class OrionWizardPanel {
                     .radio-group label { display: flex; align-items: center; gap: 10px; cursor: pointer; padding: 5px; }
                     .radio-group label:hover { background-color: var(--vscode-list-hoverBackground); }
 
-                    /* Express/Advanced setup styles */
+                    /* Welcome screen layout */
+                    .welcome-container {
+                        text-align: center;
+                        padding-top: 20px;
+                    }
+                    .welcome-container h1 {
+                        margin-bottom: 8px;
+                    }
+                    .subtitle {
+                        opacity: 0.7;
+                        margin-bottom: 40px;
+                        font-size: 1.1em;
+                    }
+
+                    /* Primary action (Express) */
+                    .primary-action {
+                        margin-bottom: 50px;
+                    }
+                    .action-description {
+                        margin-top: 12px;
+                        opacity: 0.7;
+                        font-size: 0.95em;
+                    }
+
+                    /* Secondary action (Advanced) */
+                    .secondary-action {
+                        padding-top: 20px;
+                        border-top: 1px solid var(--vscode-panel-border);
+                    }
+                    .action-description-small {
+                        margin-top: 8px;
+                        opacity: 0.6;
+                        font-size: 0.85em;
+                    }
+
+                    /* Legacy setup-section styles (for other steps) */
                     .setup-section {
                         border: 1px solid var(--vscode-panel-border);
                         border-radius: 6px;
@@ -245,10 +313,6 @@ export class OrionWizardPanel {
                         font-size: 0.95em;
                     }
                     .setup-section .btn { margin-bottom: 0; }
-                    .express-section {
-                        border-color: var(--vscode-button-background);
-                        background-color: color-mix(in srgb, var(--vscode-button-background) 10%, transparent);
-                    }
                     .divider {
                         text-align: center;
                         margin: 20px 0;
@@ -287,24 +351,27 @@ export class OrionWizardPanel {
                 <div class="container">
                     <!-- Step 1: Welcome -->
                     <div id="step-1" class="step">
-                        <h1>Welcome to ORION Studio</h1>
+                        <div class="welcome-container">
+                            <h1>Welcome to Orion Studio</h1>
+                            <p class="subtitle">Neutron Imaging Notebook Environment</p>
 
-                        <div class="setup-section express-section">
-                            <h2>Express Setup</h2>
-                            <p>Get started in seconds. Clones notebooks to ~/orion_notebooks</p>
-                            <button id="express-btn" class="btn" onclick="startExpressSetup()">
-                                Start Express Setup
-                            </button>
-                        </div>
+                            <div class="primary-action">
+                                <button id="express-btn" class="btn-primary-large" onclick="startExpressSetup()">
+                                    ▶ Start
+                                </button>
+                                <p class="action-description">
+                                    Express setup — clones notebooks to ~/orion_notebooks
+                                </p>
+                            </div>
 
-                        <div class="divider">— or —</div>
-
-                        <div class="setup-section">
-                            <h2>Advanced Setup</h2>
-                            <p>Choose location, branch, or connect to remote cluster</p>
-                            <button class="btn btn-secondary" onclick="nextStep('advanced')">
-                                Configure Manually
-                            </button>
+                            <div class="secondary-action">
+                                <button class="btn-link" onclick="nextStep('advanced')">
+                                    Advanced Setup →
+                                </button>
+                                <p class="action-description-small">
+                                    Configure location, branch, or connect to remote cluster
+                                </p>
+                            </div>
                         </div>
                     </div>
 
