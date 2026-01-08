@@ -20,12 +20,13 @@ interface RepoStatusData {
 
 /**
  * Escape special characters for use in HTML attribute values.
+ * For data-tooltip attributes used with CSS content: attr(),
+ * we preserve newlines (CSS white-space: pre-line handles them).
  */
 function escapeHtmlAttr(text: string): string {
   return text
     .replace(/&/g, "&amp;")
-    .replace(/"/g, "&quot;")
-    .replace(/\n/g, "&#10;");
+    .replace(/"/g, "&quot;");
 }
 
 export class OrionWizardPanel {
@@ -258,9 +259,9 @@ export class OrionWizardPanel {
           <button
             class="btn-express"
             onclick="startExpressSetup('${repo.id}')"
-            title="${escapeHtmlAttr(buttonTooltip)}"
+            data-tooltip="${escapeHtmlAttr(buttonTooltip)}"
           >
-            <span class="status-indicator ${statusClass}" title="${escapeHtmlAttr(statusTooltip)}"></span>
+            <span class="status-indicator ${statusClass}"></span>
             ${repo.displayName}
           </button>
         `;
@@ -363,9 +364,40 @@ export class OrionWizardPanel {
                         gap: 10px;
                         min-width: 160px;
                         transition: background-color 0.15s ease;
+                        position: relative;
                     }
                     .btn-express:hover { background-color: var(--vscode-button-hoverBackground); }
                     .btn-express:disabled { opacity: 0.5; cursor: not-allowed; }
+
+                    /* Custom CSS tooltip for Express buttons */
+                    .btn-express[data-tooltip]::after {
+                        content: attr(data-tooltip);
+                        position: absolute;
+                        bottom: 100%;
+                        left: 50%;
+                        transform: translateX(-50%);
+                        margin-bottom: 8px;
+                        padding: 8px 12px;
+                        background-color: var(--vscode-editorWidget-background, #252526);
+                        color: var(--vscode-editorWidget-foreground, #cccccc);
+                        border: 1px solid var(--vscode-editorWidget-border, #454545);
+                        border-radius: 4px;
+                        font-size: 0.85em;
+                        font-weight: normal;
+                        white-space: pre-line;
+                        max-width: 300px;
+                        text-align: left;
+                        z-index: 1000;
+                        opacity: 0;
+                        visibility: hidden;
+                        transition: opacity 0.15s ease, visibility 0.15s ease;
+                        pointer-events: none;
+                        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+                    }
+                    .btn-express[data-tooltip]:hover::after {
+                        opacity: 1;
+                        visibility: visible;
+                    }
 
                     /* Status indicator circle */
                     .status-indicator {
