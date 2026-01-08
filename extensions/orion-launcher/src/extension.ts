@@ -11,6 +11,7 @@ import * as simpleGit from "simple-git";
 export interface OrionConfig {
   mode: "EXISTING" | "CLONE" | "EXPRESS";
   targetDir: string;
+  repoUrl?: string;
   branchName?: string;
   enableCopilot?: boolean;
   setupDate?: string;
@@ -32,12 +33,6 @@ export interface Repository {
  * Repository status for UI display.
  */
 export type RepositoryStatus = "ready" | "has-changes" | "missing";
-
-// Express setup configuration
-/** @deprecated Use REPOSITORY_REGISTRY instead. Will be removed in Phase 5. */
-const DEFAULT_REPO_URL = "https://github.com/neutronimaging/python_notebooks";
-/** @deprecated Use REPOSITORY_REGISTRY instead. Will be removed in Phase 5. */
-const EXPRESS_TARGET_DIR = path.join(os.homedir(), "orion_notebooks");
 
 /**
  * Registry of available repositories for multi-repo support.
@@ -170,8 +165,12 @@ export async function runSetup(
     };
 
     if (config.mode === "CLONE") {
+      if (!config.repoUrl) {
+        vscode.window.showErrorMessage("Repository URL is required for clone mode.");
+        return false;
+      }
       send(`echo "Cloning repository..."`);
-      const repoUrl = DEFAULT_REPO_URL;
+      const repoUrl = config.repoUrl;
 
       // Robust Clone Logic:
       // 1. If dir doesn't exist OR is empty -> Clone
@@ -216,15 +215,14 @@ export async function runSetup(
     const pixiService = new PixiService();
 
     try {
-      if (config.mode === "CLONE" || config.mode === "EXPRESS") {
-        const isExpress = config.mode === "EXPRESS";
-        progress.report({
-          message: isExpress
-            ? "Cloning notebooks (express mode)..."
-            : "Cloning repository...",
-        });
+      if (config.mode === "CLONE") {
+        if (!config.repoUrl) {
+          vscode.window.showErrorMessage("Repository URL is required for clone mode.");
+          return false;
+        }
+        progress.report({ message: "Cloning repository..." });
         await gitService.clone(
-          DEFAULT_REPO_URL,
+          config.repoUrl,
           config.targetDir,
           config.branchName,
           config.shallow,
@@ -331,15 +329,6 @@ export async function runExpressSetup(repoId: string): Promise<boolean> {
           console.warn("Pixi install failed", e);
         }
 
-        // Save config for logging/debugging
-        const config: OrionConfig = {
-          mode: "EXPRESS",
-          targetDir,
-          branchName,
-          setupDate: new Date().toISOString(),
-        };
-        await saveConfig(config);
-
         // Open workspace
         progress.report({ message: "Opening workspace..." });
         vscode.window.showInformationMessage(
@@ -359,14 +348,3 @@ export async function runExpressSetup(repoId: string): Promise<boolean> {
   );
 }
 
-/**
- * Save Orion configuration to ~/.orion-studio/config.json
- */
-async function saveConfig(config: OrionConfig): Promise<void> {
-  const orionDir = path.join(os.homedir(), ".orion-studio");
-  if (!fs.existsSync(orionDir)) {
-    fs.mkdirSync(orionDir, { recursive: true });
-  }
-  const configPath = path.join(orionDir, "config.json");
-  fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
-}
