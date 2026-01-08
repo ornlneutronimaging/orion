@@ -105,10 +105,16 @@ export async function getRepositoryStatus(repo: Repository): Promise<{
 export function activate(context: vscode.ExtensionContext) {
   console.log("Orion Launcher is active");
 
-  // Register command to manually open wizard
+  // Register command to manually open wizard (Orion Home button)
   context.subscriptions.push(
-    vscode.commands.registerCommand("orion-launcher.openWizard", () => {
-      OrionWizardPanel.createOrShow(context.extensionUri);
+    vscode.commands.registerCommand("orion-launcher.openWizard", async () => {
+      if (vscode.workspace.workspaceFolders?.length) {
+        // Close folder - wizard will appear after window reloads via checkConfigAndLaunch()
+        await vscode.commands.executeCommand("workbench.action.closeFolder");
+      } else {
+        // No folder open, show wizard directly
+        OrionWizardPanel.createOrShow(context.extensionUri);
+      }
     }),
   );
 
