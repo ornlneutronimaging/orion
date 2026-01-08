@@ -73,4 +73,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Build: Python 3.11 with Pixi environment management
 - Icon Generation: cairosvg for SVG to PNG/ICNS conversion
 
+[1.1.1]: https://github.com/ornlneutronimaging/orion/compare/v1.1.0...v1.1.1
 [1.0.0]: https://github.com/ornlneutronimaging/orion/releases/tag/v1.0.0
