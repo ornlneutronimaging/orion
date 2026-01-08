@@ -18,6 +18,16 @@ interface RepoStatusData {
   untrackedCount?: number;
 }
 
+/**
+ * Escape special characters for use in HTML attribute values.
+ */
+function escapeHtmlAttr(text: string): string {
+  return text
+    .replace(/&/g, "&amp;")
+    .replace(/"/g, "&quot;")
+    .replace(/\n/g, "&#10;");
+}
+
 export class OrionWizardPanel {
   public static currentPanel: OrionWizardPanel | undefined;
   public static readonly viewType = "orionWizard";
@@ -248,9 +258,9 @@ export class OrionWizardPanel {
           <button
             class="btn-express"
             onclick="startExpressSetup('${repo.id}')"
-            title="${buttonTooltip}"
+            title="${escapeHtmlAttr(buttonTooltip)}"
           >
-            <span class="status-indicator ${statusClass}" title="${statusTooltip}"></span>
+            <span class="status-indicator ${statusClass}" title="${escapeHtmlAttr(statusTooltip)}"></span>
             ${repo.displayName}
           </button>
         `;
