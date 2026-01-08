@@ -2,6 +2,21 @@ import * as vscode from "vscode";
 import * as fs from "fs";
 import * as path from "path";
 import * as os from "os";
+import {
+  REPOSITORY_REGISTRY,
+  getRepositoryStatus,
+  Repository,
+  RepositoryStatus,
+} from "./extension";
+
+/**
+ * Status data for a repository, used for UI display.
+ */
+interface RepoStatusData {
+  repo: Repository;
+  status: RepositoryStatus;
+  untrackedCount?: number;
+}
 
 export class OrionWizardPanel {
   public static currentPanel: OrionWizardPanel | undefined;
@@ -9,9 +24,10 @@ export class OrionWizardPanel {
 
   private readonly _panel: vscode.WebviewPanel;
   private readonly _extensionUri: vscode.Uri;
+  private readonly _repoStatuses: RepoStatusData[];
   private _disposables: vscode.Disposable[] = [];
 
-  public static createOrShow(extensionUri: vscode.Uri) {
+  public static async createOrShow(extensionUri: vscode.Uri) {
     const column = vscode.window.activeTextEditor
       ? vscode.window.activeTextEditor.viewColumn
       : undefined;
@@ -21,6 +37,18 @@ export class OrionWizardPanel {
       OrionWizardPanel.currentPanel._panel.reveal(column);
       return;
     }
+
+    // Fetch status for all repositories before creating panel
+    const repoStatuses: RepoStatusData[] = await Promise.all(
+      REPOSITORY_REGISTRY.map(async (repo) => {
+        const statusResult = await getRepositoryStatus(repo);
+        return {
+          repo,
+          status: statusResult.status,
+          untrackedCount: statusResult.untrackedCount,
+        };
+      })
+    );
 
     // Otherwise, create a new panel.
     const panel = vscode.window.createWebviewPanel(
@@ -36,12 +64,17 @@ export class OrionWizardPanel {
       },
     );
 
-    OrionWizardPanel.currentPanel = new OrionWizardPanel(panel, extensionUri);
+    OrionWizardPanel.currentPanel = new OrionWizardPanel(panel, extensionUri, repoStatuses);
   }
 
-  private constructor(panel: vscode.WebviewPanel, extensionUri: vscode.Uri) {
+  private constructor(
+    panel: vscode.WebviewPanel,
+    extensionUri: vscode.Uri,
+    repoStatuses: RepoStatusData[]
+  ) {
     this._panel = panel;
     this._extensionUri = extensionUri;
+    this._repoStatuses = repoStatuses;
 
     // Set the webview's initial html content
     this._update();
@@ -60,9 +93,8 @@ export class OrionWizardPanel {
           case "expressSetup":
             this.dispose();
             const { runExpressSetup } = await import("./extension");
-            // Pass 'reduction' as default for backward compatibility
-            // Phase 3 will update UI to pass the correct repo ID based on user selection
-            await runExpressSetup("reduction");
+            // Pass the repository ID from the UI button clicked
+            await runExpressSetup(message.repoId);
             return;
           case "saveConfig":
             this._saveConfig(message.config);
@@ -192,6 +224,43 @@ export class OrionWizardPanel {
     this._panel.webview.html = this._getHtmlForWebview(webview);
   }
 
+  /**
+   * Generate HTML for the Express setup buttons with status indicators.
+   */
+  private _generateExpressButtonsHtml(): string {
+    return this._repoStatuses
+      .map(({ repo, status, untrackedCount }) => {
+        const statusClass =
+          status === "ready"
+            ? "status-ready"
+            : status === "has-changes"
+              ? "status-has-changes"
+              : "status-missing";
+
+        const statusTooltip =
+          status === "ready"
+            ? "Ready — no unsaved work"
+            : status === "has-changes"
+              ? `Has unsaved notebooks: ${untrackedCount} file${untrackedCount !== 1 ? "s" : ""} — these will be preserved`
+              : "Not set up — will download on first use";
+
+        // Combine repo description with status for button tooltip
+        const buttonTooltip = `${repo.description}\n\nStatus: ${statusTooltip}`;
+
+        return `
+          <button
+            class="btn-express"
+            onclick="startExpressSetup('${repo.id}')"
+            title="${buttonTooltip}"
+          >
+            <span class="status-indicator ${statusClass}" title="${statusTooltip}"></span>
+            ${repo.displayName}
+          </button>
+        `;
+      })
+      .join("");
+  }
+
   private _getHtmlForWebview(webview: vscode.Webview) {
     // Use a nonce to only allow specific scripts to be run
     const nonce = getNonce();
@@ -239,6 +308,45 @@ export class OrionWizardPanel {
                     }
                     .btn-primary-large:hover { background-color: var(--vscode-button-hoverBackground); }
                     .btn-primary-large:disabled { opacity: 0.5; cursor: not-allowed; }
+
+                    /* Split Express buttons container */
+                    .express-buttons {
+                        display: flex;
+                        gap: 12px;
+                        justify-content: center;
+                        margin-bottom: 16px;
+                    }
+
+                    /* Individual Express button */
+                    .btn-express {
+                        background-color: var(--vscode-button-background);
+                        color: var(--vscode-button-foreground);
+                        border: none;
+                        padding: 14px 24px;
+                        cursor: pointer;
+                        font-size: 1.1em;
+                        font-weight: 500;
+                        border-radius: 6px;
+                        display: inline-flex;
+                        align-items: center;
+                        justify-content: center;
+                        gap: 10px;
+                        min-width: 160px;
+                        transition: background-color 0.15s ease;
+                    }
+                    .btn-express:hover { background-color: var(--vscode-button-hoverBackground); }
+                    .btn-express:disabled { opacity: 0.5; cursor: not-allowed; }
+
+                    /* Status indicator circle */
+                    .status-indicator {
+                        width: 10px;
+                        height: 10px;
+                        border-radius: 50%;
+                        flex-shrink: 0;
+                    }
+                    .status-ready { background-color: #22c55e; }
+                    .status-has-changes { background-color: #f97316; }
+                    .status-missing { background-color: #9ca3af; }
 
                     /* Link-style button for Advanced setup */
                     .btn-link {
@@ -358,11 +466,12 @@ export class OrionWizardPanel {
                             <p class="subtitle">Neutron Imaging Notebook Environment</p>
 
                             <div class="primary-action">
-                                <button id="express-btn" class="btn-primary-large" onclick="startExpressSetup()">
-                                    ▶ Start
-                                </button>
+                                <p style="margin-bottom: 16px; font-weight: 500;">Express Setup</p>
+                                <div class="express-buttons">
+                                    ${this._generateExpressButtonsHtml()}
+                                </div>
                                 <p class="action-description">
-                                    Express setup — clones notebooks to ~/orion_notebooks
+                                    Opens a fresh notebook environment ready to use
                                 </p>
                             </div>
 
@@ -478,12 +587,13 @@ export class OrionWizardPanel {
                         document.getElementById('step-1').classList.add('active');
                     }
 
-                    function startExpressSetup() {
+                    function startExpressSetup(repoId) {
                         // Show loading overlay
                         document.getElementById('loading-overlay').classList.add('active');
-                        document.getElementById('express-btn').disabled = true;
-                        // Send message to extension
-                        vscode.postMessage({ command: 'expressSetup' });
+                        // Disable all express buttons
+                        document.querySelectorAll('.btn-express').forEach(btn => btn.disabled = true);
+                        // Send message to extension with the repository ID
+                        vscode.postMessage({ command: 'expressSetup', repoId: repoId });
                     }
 
                     function nextStep(step) {
