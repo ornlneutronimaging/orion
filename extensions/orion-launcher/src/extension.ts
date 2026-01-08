@@ -17,9 +17,93 @@ export interface OrionConfig {
   shallow?: boolean;
 }
 
+/**
+ * Repository definition for multi-repo support.
+ */
+export interface Repository {
+  id: string;           // unique identifier: 'reduction' | 'reconstruction'
+  displayName: string;  // UI label: 'Reduction' | 'Reconstruction'
+  description: string;  // tooltip text
+  url: string;          // git clone URL
+  targetDir: string;    // absolute path to local directory
+}
+
+/**
+ * Repository status for UI display.
+ */
+export type RepositoryStatus = "ready" | "has-changes" | "missing";
+
 // Express setup configuration
 const DEFAULT_REPO_URL = "https://github.com/neutronimaging/python_notebooks";
 const EXPRESS_TARGET_DIR = path.join(os.homedir(), "orion_notebooks");
+
+/**
+ * Registry of available repositories for multi-repo support.
+ */
+export const REPOSITORY_REGISTRY: Repository[] = [
+  {
+    id: "reduction",
+    displayName: "Reduction",
+    description: "Process raw neutron data into hyperspectrum for downstream analysis",
+    url: "https://github.com/neutronimaging/python_notebooks",
+    targetDir: path.join(os.homedir(), "orion_notebooks"),
+  },
+  {
+    id: "reconstruction",
+    displayName: "Reconstruction",
+    description: "Conduct CT reconstruction from stacks of projections",
+    url: "https://github.com/ornlneutronimaging/all_ct_reconstruction",
+    targetDir: path.join(os.homedir(), "orion_ct_recon"),
+  },
+];
+
+/**
+ * Look up a repository by its ID.
+ */
+export function getRepositoryById(id: string): Repository | undefined {
+  return REPOSITORY_REGISTRY.find((repo) => repo.id === id);
+}
+
+/**
+ * Detect the status of a repository on disk.
+ * - 'missing': targetDir does not exist or is not a git repo
+ * - 'has-changes': repo exists with untracked files
+ * - 'ready': repo exists with no untracked files
+ */
+export async function getRepositoryStatus(repo: Repository): Promise<{
+  status: RepositoryStatus;
+  untrackedCount?: number;
+}> {
+  // Check if directory exists
+  if (!fs.existsSync(repo.targetDir)) {
+    return { status: "missing" };
+  }
+
+  // Check if it's a git repository
+  const gitDir = path.join(repo.targetDir, ".git");
+  if (!fs.existsSync(gitDir)) {
+    return { status: "missing" };
+  }
+
+  try {
+    // Use simple-git to check for untracked files
+    const git = simpleGit.simpleGit({ baseDir: repo.targetDir });
+    const status = await git.status();
+
+    // Count untracked files (user's work that would be preserved)
+    const untrackedCount = status.not_added.length;
+
+    if (untrackedCount > 0) {
+      return { status: "has-changes", untrackedCount };
+    }
+
+    return { status: "ready" };
+  } catch (error) {
+    // If git operations fail, treat as missing
+    console.warn(`Failed to get git status for ${repo.targetDir}:`, error);
+    return { status: "missing" };
+  }
+}
 
 export function activate(context: vscode.ExtensionContext) {
   console.log("Orion Launcher is active");
@@ -49,9 +133,16 @@ export function activate(context: vscode.ExtensionContext) {
 async function checkConfigAndLaunch(context: vscode.ExtensionContext) {
   // Skip wizard if already in an Orion workspace
   const currentFolder = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
-  if (currentFolder && currentFolder.includes("orion_notebooks")) {
-    console.log("Already in Orion workspace, skipping wizard");
-    return;
+  if (currentFolder) {
+    // Check if current workspace matches any registered repository
+    const currentBasename = path.basename(currentFolder);
+    const isInRegisteredRepo = REPOSITORY_REGISTRY.some(
+      (repo) => path.basename(repo.targetDir) === currentBasename
+    );
+    if (isInRegisteredRepo) {
+      console.log("Already in Orion workspace, skipping wizard");
+      return;
+    }
   }
 
   // Show wizard - let user choose Express or Advanced
