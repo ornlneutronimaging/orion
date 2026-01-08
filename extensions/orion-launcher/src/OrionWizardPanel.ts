@@ -152,10 +152,7 @@ export class OrionWizardPanel {
       fs.mkdirSync(orionDir);
     }
 
-    // If cloning, append the subdirectory to the targetDir
-    if (config.mode === "CLONE") {
-      config.targetDir = path.join(config.targetDir, "neutron_notebooks");
-    }
+    // targetDir is now set directly from registry or user input (no subdirectory appending)
 
     const configPath = path.join(orionDir, "config.json");
     fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
@@ -259,6 +256,29 @@ export class OrionWizardPanel {
         `;
       })
       .join("");
+  }
+
+  /**
+   * Generate HTML options for the repository dropdown in Advanced mode.
+   */
+  private _generateRepoOptionsHtml(): string {
+    const repoOptions = this._repoStatuses
+      .map(({ repo }) => `<option value="${repo.id}">${repo.displayName}</option>`)
+      .join("");
+    return repoOptions + '<option value="custom">Custom URL</option>';
+  }
+
+  /**
+   * Serialize repository registry data for JavaScript access.
+   */
+  private _getRepoRegistryJson(): string {
+    const registryData = this._repoStatuses.map(({ repo }) => ({
+      id: repo.id,
+      displayName: repo.displayName,
+      url: repo.url,
+      targetDir: repo.targetDir,
+    }));
+    return JSON.stringify(registryData);
   }
 
   private _getHtmlForWebview(webview: vscode.Webview) {
@@ -370,6 +390,17 @@ export class OrionWizardPanel {
                         background-color: var(--vscode-input-background);
                         color: var(--vscode-input-foreground);
                         border: 1px solid var(--vscode-input-border);
+                    }
+                    select {
+                        width: 100%; padding: 8px;
+                        background-color: var(--vscode-input-background);
+                        color: var(--vscode-input-foreground);
+                        border: 1px solid var(--vscode-input-border);
+                        cursor: pointer;
+                    }
+                    select:disabled {
+                        opacity: 0.6;
+                        cursor: not-allowed;
                     }
                     .radio-group { margin-bottom: 15px; }
                     .radio-group label { display: flex; align-items: center; gap: 10px; cursor: pointer; padding: 5px; }
@@ -543,19 +574,34 @@ export class OrionWizardPanel {
                     <div id="step-3" class="step">
                         <h1>Configuration</h1>
 
-                        <div class="input-group">
-                            <label>Target Folder</label>
-                            <div style="display: flex; gap: 10px;">
-                                <input type="text" id="targetDir" readonly placeholder="Select a folder...">
-                                <button id="browse-btn" class="btn" style="width: auto;" onclick="selectFolder()">Browse</button>
-                            </div>
-                        </div>
-
                         <div id="clone-options" style="display: none;">
+                            <div class="input-group">
+                                <label>Repository</label>
+                                <select id="repoSelect" onchange="onRepoSelectChange()">
+                                    ${this._generateRepoOptionsHtml()}
+                                </select>
+                            </div>
+
+                            <div id="custom-url-group" class="input-group" style="display: none;">
+                                <label>Repository URL</label>
+                                <input type="text" id="customRepoUrl" placeholder="https://github.com/...">
+                            </div>
+
                             <div class="input-group">
                                 <label>Branch Name</label>
                                 <input type="text" id="branchName" value="analysis-${new Date().toISOString().slice(0, 10).replace(/-/g, "")}">
                             </div>
+                        </div>
+
+                        <div class="input-group">
+                            <label>Target Folder</label>
+                            <div id="target-dir-container" style="display: flex; gap: 10px;">
+                                <input type="text" id="targetDir" readonly placeholder="Select a folder...">
+                                <button id="browse-btn" class="btn" style="width: auto;" onclick="selectFolder()">Browse</button>
+                            </div>
+                            <p id="target-dir-hint" style="margin-top: 5px; font-size: 0.85em; opacity: 0.7; display: none;">
+                                Auto-filled from repository selection
+                            </p>
                         </div>
 
                         <div class="input-group">
@@ -573,6 +619,9 @@ export class OrionWizardPanel {
                     const vscode = acquireVsCodeApi();
                     let currentMode = '';
                     const isRemote = ${isRemote};
+
+                    // Repository registry data for auto-fill
+                    const repoRegistry = ${this._getRepoRegistryJson()};
 
                     // Initial State
                     if (isRemote) {
@@ -608,6 +657,47 @@ export class OrionWizardPanel {
                     function setMode(mode) {
                         currentMode = mode;
                         document.getElementById('clone-options').style.display = mode === 'CLONE' ? 'block' : 'none';
+
+                        if (mode === 'CLONE') {
+                            // Initialize repo selection to first option and auto-fill
+                            document.getElementById('repoSelect').value = repoRegistry[0].id;
+                            onRepoSelectChange();
+                        } else {
+                            // For EXISTING mode, enable manual folder selection
+                            document.getElementById('targetDir').readOnly = isRemote ? false : true;
+                            document.getElementById('targetDir').value = '';
+                            document.getElementById('browse-btn').style.display = 'inline-block';
+                            document.getElementById('target-dir-hint').style.display = 'none';
+                        }
+                    }
+
+                    function onRepoSelectChange() {
+                        const repoSelect = document.getElementById('repoSelect');
+                        const selectedValue = repoSelect.value;
+                        const customUrlGroup = document.getElementById('custom-url-group');
+                        const targetDirInput = document.getElementById('targetDir');
+                        const browseBtn = document.getElementById('browse-btn');
+                        const targetDirHint = document.getElementById('target-dir-hint');
+
+                        if (selectedValue === 'custom') {
+                            // Custom URL mode: show URL field, enable folder browsing
+                            customUrlGroup.style.display = 'block';
+                            targetDirInput.value = '';
+                            targetDirInput.readOnly = isRemote ? false : true;
+                            targetDirInput.placeholder = 'Select a folder...';
+                            browseBtn.style.display = 'inline-block';
+                            targetDirHint.style.display = 'none';
+                        } else {
+                            // Registered repo: hide URL field, auto-fill target directory
+                            customUrlGroup.style.display = 'none';
+                            const repo = repoRegistry.find(r => r.id === selectedValue);
+                            if (repo) {
+                                targetDirInput.value = repo.targetDir;
+                                targetDirInput.readOnly = true;
+                                browseBtn.style.display = 'none';
+                                targetDirHint.style.display = 'block';
+                            }
+                        }
                     }
 
                     function selectFolder() {
@@ -642,6 +732,28 @@ export class OrionWizardPanel {
                             enableCopilot: document.getElementById('enableCopilot').checked,
                             setupDate: new Date().toISOString()
                         };
+
+                        // For CLONE mode, include the repository URL
+                        if (currentMode === 'CLONE') {
+                            const repoSelect = document.getElementById('repoSelect');
+                            const selectedValue = repoSelect.value;
+
+                            if (selectedValue === 'custom') {
+                                // Use custom URL
+                                const customUrl = document.getElementById('customRepoUrl').value;
+                                if (!customUrl) {
+                                    vscode.postMessage({ command: 'alert', text: 'Please enter a repository URL.' });
+                                    return;
+                                }
+                                config.repoUrl = customUrl;
+                            } else {
+                                // Use registered repo URL
+                                const repo = repoRegistry.find(r => r.id === selectedValue);
+                                if (repo) {
+                                    config.repoUrl = repo.url;
+                                }
+                            }
+                        }
 
                         if (!config.targetDir) {
                             vscode.postMessage({ command: 'alert', text: 'Please select a target folder.' });
