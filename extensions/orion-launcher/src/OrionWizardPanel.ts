@@ -60,7 +60,9 @@ export class OrionWizardPanel {
           case "expressSetup":
             this.dispose();
             const { runExpressSetup } = await import("./extension");
-            await runExpressSetup();
+            // Pass 'reduction' as default for backward compatibility
+            // Phase 3 will update UI to pass the correct repo ID based on user selection
+            await runExpressSetup("reduction");
             return;
           case "saveConfig":
             this._saveConfig(message.config);

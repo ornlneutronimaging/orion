@@ -34,7 +34,9 @@ export interface Repository {
 export type RepositoryStatus = "ready" | "has-changes" | "missing";
 
 // Express setup configuration
+/** @deprecated Use REPOSITORY_REGISTRY instead. Will be removed in Phase 5. */
 const DEFAULT_REPO_URL = "https://github.com/neutronimaging/python_notebooks";
+/** @deprecated Use REPOSITORY_REGISTRY instead. Will be removed in Phase 5. */
 const EXPRESS_TARGET_DIR = path.join(os.homedir(), "orion_notebooks");
 
 /**
@@ -257,15 +259,26 @@ export async function runSetup(
  * Express setup - one-click setup with sensible defaults.
  * If repo exists: refresh to latest and create new session branch.
  * If first time: full clone and create session branch.
+ *
+ * @param repoId - The repository ID from REPOSITORY_REGISTRY (e.g., 'reduction', 'reconstruction')
  */
-export async function runExpressSetup(): Promise<boolean> {
-  const targetDir = EXPRESS_TARGET_DIR;
-  const repoUrl = DEFAULT_REPO_URL;
+export async function runExpressSetup(repoId: string): Promise<boolean> {
+  // Look up repository from registry
+  const repo = getRepositoryById(repoId);
+  if (!repo) {
+    vscode.window.showErrorMessage(
+      `Unknown repository: "${repoId}". Please select a valid repository.`
+    );
+    return false;
+  }
+
+  const targetDir = repo.targetDir;
+  const repoUrl = repo.url;
 
   return vscode.window.withProgress(
     {
       location: vscode.ProgressLocation.Notification,
-      title: "Orion Express Setup",
+      title: `Orion ${repo.displayName} Setup`,
       cancellable: false,
     },
     async (progress) => {
@@ -278,7 +291,7 @@ export async function runExpressSetup(): Promise<boolean> {
 
         if (repoExists) {
           // Existing repo: refresh and create new session branch
-          progress.report({ message: "Refreshing notebooks to latest..." });
+          progress.report({ message: `Refreshing ${repo.displayName} to latest...` });
           branchName = await gitService.refreshRepository(targetDir);
           progress.report({
             message: `Created session branch: ${branchName}`,
@@ -286,8 +299,7 @@ export async function runExpressSetup(): Promise<boolean> {
         } else {
           // First time: clone (full, not shallow)
           progress.report({
-            message:
-              "First time setup - cloning notebooks (this may take a moment)...",
+            message: `First time setup - cloning ${repo.displayName} (this may take a moment)...`,
           });
           await gitService.clone(repoUrl, targetDir);
 
@@ -331,7 +343,7 @@ export async function runExpressSetup(): Promise<boolean> {
         // Open workspace
         progress.report({ message: "Opening workspace..." });
         vscode.window.showInformationMessage(
-          `Express setup complete! Session branch: ${branchName}`,
+          `${repo.displayName} setup complete! Session branch: ${branchName}`,
         );
         const uri = vscode.Uri.file(targetDir);
         await vscode.commands.executeCommand("vscode.openFolder", uri, false);
@@ -339,7 +351,7 @@ export async function runExpressSetup(): Promise<boolean> {
         return true;
       } catch (error) {
         vscode.window.showErrorMessage(
-          `Express setup failed: ${error instanceof Error ? error.message : String(error)}`,
+          `${repo.displayName} setup failed: ${error instanceof Error ? error.message : String(error)}`,
         );
         return false;
       }
