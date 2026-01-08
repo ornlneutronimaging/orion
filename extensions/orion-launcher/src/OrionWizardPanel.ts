@@ -363,6 +363,7 @@ export class OrionWizardPanel {
                         height: 10px;
                         border-radius: 50%;
                         flex-shrink: 0;
+                        pointer-events: none;
                     }
                     .status-ready { background-color: #22c55e; }
                     .status-has-changes { background-color: #f97316; }

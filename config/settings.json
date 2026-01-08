@@ -1,5 +1,6 @@
 {
   "workbench.startupEditor": "none",
+  "workbench.secondarySideBar.defaultVisibility": "hidden",
   "workbench.colorTheme": "Default Light Modern",
   "workbench.iconTheme": "vs-seti",
   "security.workspace.trust.enabled": false,

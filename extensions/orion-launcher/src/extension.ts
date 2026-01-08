@@ -125,6 +125,13 @@ export function activate(context: vscode.ExtensionContext) {
 
   // Check config on startup
   checkConfigAndLaunch(context);
+
+  // Ensure Explorer sidebar is visible when a workspace is open
+  setTimeout(() => {
+    if (vscode.workspace.workspaceFolders?.length) {
+      vscode.commands.executeCommand("workbench.view.explorer");
+    }
+  }, 500);
 }
 
 async function checkConfigAndLaunch(context: vscode.ExtensionContext) {
