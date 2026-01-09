@@ -322,7 +322,7 @@ h5web.vscode-h5web             # HDF5 file visualization
 [workspace]
 name = "orion"
 platforms = ["osx-arm64", "linux-64"]
-version = "1.0.0"
+version = "1.2.0"
 
 [dependencies]
 nodejs = "22.*"      # VS Code's expected runtime
@@ -469,14 +469,16 @@ The wizard offers connection to:
 
 These are Linux servers with shared filesystems (`/SNS/users/...`) for neutron data.
 
-### Default Repository
+### Repository Registry
 
-The wizard clones from:
-```
-https://github.com/neutronimaging/python_notebooks
-```
+The wizard supports multiple notebook repositories via a registry:
 
-This contains Jupyter notebooks for neutron imaging analysis.
+| Repository | URL | Target Directory | Description |
+|------------|-----|------------------|-------------|
+| Reduction | `neutronimaging/python_notebooks` | `~/orion_notebooks` | Process raw neutron data into hyperspectrum |
+| Reconstruction | `ornlneutronimaging/all_ct_reconstruction` | `~/orion_ct_recon` | CT reconstruction from projection stacks |
+
+Express Setup provides one-click buttons for each workflow. Advanced mode allows selecting from registered repos or entering a custom URL.
 
 ### H5Web Extension
 
@@ -492,16 +494,7 @@ Pixi is used instead of pip/conda because:
 
 ### Configuration Location
 
-User config stored at `~/.orion-studio/config.json`:
-```json
-{
-  "mode": "CLONE",
-  "targetDir": "/path/to/neutron_notebooks",
-  "branchName": "analysis-20240115",
-  "enableCopilot": true,
-  "setupDate": "2024-01-15T..."
-}
-```
+The `~/.orion-studio/` directory is preserved for future diagnostic logs but is no longer used for session persistence. The Express Setup workflow creates fresh session branches on each launch.
 
 ### Scientific Computing Dependencies
 
@@ -529,4 +522,4 @@ Currently no scientific packages bundled (numpy, tomopy, etc.) - these come from
 
 ---
 
-*Generated: 2024-12-23 | Orion Studio v1.0.0*
+*Generated: 2025-01-08 | Orion Studio v1.2.0*

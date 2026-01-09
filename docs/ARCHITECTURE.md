@@ -93,11 +93,14 @@ The primary custom extension providing the welcome wizard and setup features.
 
 **Features:**
 
-- **Express Setup**: One-click setup that clones notebooks to `~/orion_notebooks` with shallow clone
+- **Express Setup**: One-click workflow selection with two options:
+  - **Reduction**: Process raw neutron data (clones `python_notebooks` to `~/orion_notebooks`)
+  - **Reconstruction**: CT reconstruction (clones `all_ct_reconstruction` to `~/orion_ct_recon`)
+  - Visual status indicators: green (ready), orange (unsaved work), gray (not set up)
 - **Advanced Setup**: Full wizard for custom location, branch selection, and remote SSH
-- Remote SSH connection to analysis clusters
-- Git repository cloning with optional shallow clone support
-- Project template selection
+- Remote SSH connection to analysis clusters with terminal-based execution
+- Git repository cloning with session branch creation (`${USER}-session-YYYYMMDD-HHMMSS`)
+- Multi-repository registry for registered workflows
 
 **Technology:**
 

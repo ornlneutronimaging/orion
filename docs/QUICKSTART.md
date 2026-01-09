@@ -77,10 +77,18 @@ When Orion Studio launches, you'll see the welcome wizard with two options:
 
 ### Express Setup (Recommended for most users)
 
-Click **Start** for a fresh-start experience:
+Choose your workflow with one click:
+
+- **Reduction** — Process raw neutron data into hyperspectrum (clones to `~/orion_notebooks`)
+- **Reconstruction** — CT reconstruction from projection stacks (clones to `~/orion_ct_recon`)
+
+Each button shows a status indicator:
+- 🟢 Green: Repository ready, no unsaved work
+- 🟠 Orange: Has unsaved notebooks (hover to see count)
+- ⚫ Gray: Not set up yet, will download on first use
 
 **First time:**
-- Clones notebooks to `~/orion_notebooks`
+- Clones the selected repository
 - Creates a session branch: `${USER}-session-YYYYMMDD-HHMMSS`
 - Runs `pixi install` to set up the Python environment
 

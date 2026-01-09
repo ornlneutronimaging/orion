@@ -5,6 +5,42 @@ All notable changes to Orion Studio will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.0] - 2025-01-08
+
+### Added
+
+- **Multi-repository support**: Choose between Reduction and Reconstruction workflows
+  - Reduction: Process raw neutron data (python_notebooks → ~/orion_notebooks)
+  - Reconstruction: CT reconstruction from projections (all_ct_reconstruction → ~/orion_ct_recon)
+- Split Express Setup buttons with visual status indicators
+  - Green: Repository ready, no unsaved work
+  - Orange: Has unsaved notebooks (with file count)
+  - Gray: Not set up, will download on first use
+- CSS-based tooltips showing repository description and status
+- Repository dropdown in Advanced mode (Reduction, Reconstruction, Custom URL)
+- Auto-fill target directory for registered repositories in Advanced mode
+
+### Changed
+
+- Express Setup now shows two workflow options instead of single "Start" button
+- Advanced mode CLONE now uses repository registry for known repos
+- Orion Home button now closes workspace before showing wizard (clean restart)
+- Remote SSH setup uses terminal-based execution for all operations
+- Primary sidebar (Explorer) automatically shown when workspace opens
+- Secondary sidebar (Copilot panel) hidden by default on startup
+
+### Fixed
+
+- Button tooltips now work correctly in VS Code webview (CSS-based implementation)
+- Remote SSH clone operations now use $HOME for correct path resolution
+- Target folder field hidden for registered repos to avoid showing local paths
+
+### Removed
+
+- Deprecated DEFAULT_REPO_URL and EXPRESS_TARGET_DIR constants
+- Config file persistence (directory preserved for future diagnostic logs)
+- Hardcoded neutron_notebooks subdirectory logic
+
 ## [1.1.1] - 2024-12-23
 
 ### Changed
@@ -73,5 +109,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Build: Python 3.11 with Pixi environment management
 - Icon Generation: cairosvg for SVG to PNG/ICNS conversion
 
+[1.2.0]: https://github.com/ornlneutronimaging/orion/compare/v1.1.1...v1.2.0
 [1.1.1]: https://github.com/ornlneutronimaging/orion/compare/v1.1.0...v1.1.1
 [1.0.0]: https://github.com/ornlneutronimaging/orion/releases/tag/v1.0.0
