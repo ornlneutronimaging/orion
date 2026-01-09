@@ -177,29 +177,56 @@ export async function runSetup(
       terminal.sendText(cmd);
     };
 
+    // For remote execution, we use $HOME to get the correct remote home directory
+    // Extract just the directory name from the local path (e.g., "orion_notebooks" from "/Users/x/orion_notebooks")
+    const targetDirName = path.basename(config.targetDir);
+    // Use $HOME which will be evaluated on the remote
+    const remoteTargetDir = `$HOME/${targetDirName}`;
+
+    // Debug: show which mode is being used
+    send(`echo "Setup mode: ${config.mode}"`);
+    send(`echo "Remote target directory: ${remoteTargetDir}"`);
+
     if (config.mode === "CLONE") {
       if (!config.repoUrl) {
         vscode.window.showErrorMessage("Repository URL is required for clone mode.");
         return false;
       }
-      send(`echo "Cloning repository..."`);
+      send(`echo "Cloning repository from: ${config.repoUrl}"`);
       const repoUrl = config.repoUrl;
 
-      // Robust Clone Logic:
-      // 1. If dir doesn't exist OR is empty -> Clone
+      // Clone with error checking:
+      // 1. If dir doesn't exist OR is empty -> Clone (with error check)
       // 2. If dir exists and is a valid git repo -> Skip
-      // 3. Otherwise -> Warn/Fail
-      const cloneCmd = `if [ ! -d "${config.targetDir}" ] || [ -z "$(ls -A "${config.targetDir}")" ]; then git clone "${repoUrl}" "${config.targetDir}"; elif git -C "${config.targetDir}" rev-parse --is-inside-work-tree >/dev/null 2>&1; then echo "Directory exists and is a valid git repository. Skipping clone."; else echo "Error: Target directory exists, is not empty, and is not a git repository."; fi`;
-      send(cloneCmd);
+      // 3. Otherwise -> Fail
+      send(`if [ ! -d "${remoteTargetDir}" ] || [ -z "$(ls -A "${remoteTargetDir}" 2>/dev/null)" ]; then
+  echo "Cloning repository..."
+  if ! git clone "${repoUrl}" "${remoteTargetDir}"; then
+    echo "ERROR: git clone failed. Please check the URL and your network connection."
+    exit 1
+  fi
+elif git -C "${remoteTargetDir}" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+  echo "Directory exists and is a valid git repository. Skipping clone."
+else
+  echo "ERROR: Target directory exists, is not empty, and is not a git repository."
+  exit 1
+fi`);
 
       if (config.branchName) {
-        send(`cd "${config.targetDir}"`);
+        send(`cd "${remoteTargetDir}"`);
         // Try create branch, if fails (exists), checkout it
         send(
           `git checkout -b "${config.branchName}" || git checkout "${config.branchName}"`,
         );
       }
     }
+
+    // Verify target directory exists before proceeding
+    send(`if [ ! -d "${remoteTargetDir}" ]; then
+  echo "ERROR: Target directory does not exist: ${remoteTargetDir}"
+  echo "Please ensure the repository was cloned successfully or the directory exists."
+  exit 1
+fi`);
 
     send(`echo "Checking for Pixi..."`);
     // Basic check and install for Linux (assuming remote is Linux)
@@ -208,7 +235,7 @@ export async function runSetup(
     );
 
     send(`echo "Setting up environment..."`);
-    send(`cd "${config.targetDir}" && pixi install`);
+    send(`cd "${remoteTargetDir}" && pixi install`);
 
     // Note: Extensions are installed via remote.SSH.defaultExtensions setting.
     // We just wait a bit to ensure everything is ready.
@@ -216,7 +243,7 @@ export async function runSetup(
     send(`echo "Setup complete. Opening folder..."`);
     // Attempt to open the folder in the same window
     // Add a small delay to ensure extensions are registered
-    send(`sleep 5 && code -r "${config.targetDir}"`);
+    send(`sleep 5 && code -r "${remoteTargetDir}"`);
 
     vscode.window.showInformationMessage(
       "Setup commands sent to terminal. It should open automatically. If not, run 'code -r .' in the terminal.",

@@ -179,35 +179,30 @@ export class OrionWizardPanel {
         cancellable: false,
       },
       async (progress) => {
-        const { runSetup } = await import("./extension");
-        // Cast config to any to avoid type issues with dynamic import
-        const success = await runSetup(config, progress);
+        try {
+          const { runSetup } = await import("./extension");
+          const success = await runSetup(config, progress);
 
-        if (success) {
-          vscode.window.showInformationMessage(
-            "Setup complete! Opening workspace...",
-          );
-          if (config.targetDir) {
-            let uri: vscode.Uri;
+          if (success) {
             if (vscode.env.remoteName) {
-              // Construct remote URI
-              // Use 'as any' to access remoteAuthority if not in type definitions, or check if it exists on env
-              const authority = (vscode.env as any).remoteAuthority;
-              if (authority) {
-                uri = vscode.Uri.from({
-                  scheme: "vscode-remote",
-                  authority: authority,
-                  path: config.targetDir,
-                });
-              } else {
-                // Fallback if authority is missing (shouldn't happen in remote)
-                uri = vscode.Uri.file(config.targetDir);
-              }
+              // Remote: runSetup already sent "code -r" command to terminal
+              // Don't try to open folder from extension - the terminal handles it
+              vscode.window.showInformationMessage(
+                "Setup complete! The workspace will open automatically via the terminal.",
+              );
             } else {
-              uri = vscode.Uri.file(config.targetDir);
+              // Local: open folder directly
+              vscode.window.showInformationMessage(
+                "Setup complete! Opening workspace...",
+              );
+              if (config.targetDir) {
+                const uri = vscode.Uri.file(config.targetDir);
+                vscode.commands.executeCommand("vscode.openFolder", uri);
+              }
             }
-            vscode.commands.executeCommand("vscode.openFolder", uri);
           }
+        } catch (e) {
+          vscode.window.showErrorMessage(`Setup failed: ${e instanceof Error ? e.message : String(e)}`);
         }
       },
     );
@@ -636,16 +631,15 @@ export class OrionWizardPanel {
                             </div>
                         </div>
 
-                        <div class="input-group">
+                        <div id="target-folder-group" class="input-group">
                             <label>Target Folder</label>
                             <div id="target-dir-container" style="display: flex; gap: 10px;">
                                 <input type="text" id="targetDir" readonly placeholder="Select a folder...">
                                 <button id="browse-btn" class="btn" style="width: auto;" onclick="selectFolder()">Browse</button>
                             </div>
-                            <p id="target-dir-hint" style="margin-top: 5px; font-size: 0.85em; opacity: 0.7; display: none;">
-                                Auto-filled from repository selection
-                            </p>
                         </div>
+                        <!-- Hidden input to store targetDir for registered repos (used for dirname extraction) -->
+                        <input type="hidden" id="targetDirHidden">
 
                         <div class="input-group">
                             <label>
@@ -706,11 +700,11 @@ export class OrionWizardPanel {
                             document.getElementById('repoSelect').value = repoRegistry[0].id;
                             onRepoSelectChange();
                         } else {
-                            // For EXISTING mode, enable manual folder selection
+                            // For EXISTING mode, show target folder and enable manual folder selection
+                            document.getElementById('target-folder-group').style.display = 'block';
                             document.getElementById('targetDir').readOnly = isRemote ? false : true;
                             document.getElementById('targetDir').value = '';
                             document.getElementById('browse-btn').style.display = 'inline-block';
-                            document.getElementById('target-dir-hint').style.display = 'none';
                         }
                     }
 
@@ -718,27 +712,30 @@ export class OrionWizardPanel {
                         const repoSelect = document.getElementById('repoSelect');
                         const selectedValue = repoSelect.value;
                         const customUrlGroup = document.getElementById('custom-url-group');
+                        const targetFolderGroup = document.getElementById('target-folder-group');
                         const targetDirInput = document.getElementById('targetDir');
+                        const targetDirHidden = document.getElementById('targetDirHidden');
                         const browseBtn = document.getElementById('browse-btn');
-                        const targetDirHint = document.getElementById('target-dir-hint');
 
                         if (selectedValue === 'custom') {
-                            // Custom URL mode: show URL field, enable folder browsing
+                            // Custom URL mode: show URL field and target folder (user must specify both)
                             customUrlGroup.style.display = 'block';
+                            targetFolderGroup.style.display = 'block';
                             targetDirInput.value = '';
                             targetDirInput.readOnly = isRemote ? false : true;
                             targetDirInput.placeholder = 'Select a folder...';
                             browseBtn.style.display = 'inline-block';
-                            targetDirHint.style.display = 'none';
+                            targetDirHidden.value = '';
                         } else {
-                            // Registered repo: hide URL field, auto-fill target directory
+                            // Registered repo: hide URL field and target folder
+                            // (path is computed on remote using $HOME)
                             customUrlGroup.style.display = 'none';
+                            targetFolderGroup.style.display = 'none';
                             const repo = repoRegistry.find(r => r.id === selectedValue);
                             if (repo) {
+                                // Store in hidden field for dirname extraction
+                                targetDirHidden.value = repo.targetDir;
                                 targetDirInput.value = repo.targetDir;
-                                targetDirInput.readOnly = true;
-                                browseBtn.style.display = 'none';
-                                targetDirHint.style.display = 'block';
                             }
                         }
                     }
@@ -768,9 +765,15 @@ export class OrionWizardPanel {
                     }
 
                     function finishSetup() {
+                        // Get targetDir from visible input or hidden input (for registered repos)
+                        let targetDir = document.getElementById('targetDir').value;
+                        if (!targetDir) {
+                            targetDir = document.getElementById('targetDirHidden').value;
+                        }
+
                         const config = {
                             mode: currentMode,
-                            targetDir: document.getElementById('targetDir').value,
+                            targetDir: targetDir,
                             branchName: document.getElementById('branchName').value,
                             enableCopilot: document.getElementById('enableCopilot').checked,
                             setupDate: new Date().toISOString()
@@ -782,25 +785,30 @@ export class OrionWizardPanel {
                             const selectedValue = repoSelect.value;
 
                             if (selectedValue === 'custom') {
-                                // Use custom URL
+                                // Use custom URL - require target folder
                                 const customUrl = document.getElementById('customRepoUrl').value;
                                 if (!customUrl) {
                                     vscode.postMessage({ command: 'alert', text: 'Please enter a repository URL.' });
                                     return;
                                 }
+                                if (!config.targetDir) {
+                                    vscode.postMessage({ command: 'alert', text: 'Please select a target folder.' });
+                                    return;
+                                }
                                 config.repoUrl = customUrl;
                             } else {
-                                // Use registered repo URL
+                                // Use registered repo URL (targetDir already set from hidden input)
                                 const repo = repoRegistry.find(r => r.id === selectedValue);
                                 if (repo) {
                                     config.repoUrl = repo.url;
                                 }
                             }
-                        }
-
-                        if (!config.targetDir) {
-                            vscode.postMessage({ command: 'alert', text: 'Please select a target folder.' });
-                            return;
+                        } else {
+                            // EXISTING mode - require target folder
+                            if (!config.targetDir) {
+                                vscode.postMessage({ command: 'alert', text: 'Please select a target folder.' });
+                                return;
+                            }
                         }
 
                         vscode.postMessage({ command: 'saveConfig', config: config });
