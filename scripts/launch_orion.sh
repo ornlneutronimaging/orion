@@ -27,13 +27,40 @@ if [ ! -f "$APP_PATH" ]; then
     fi
 fi
 
-# Define Portable Directories
+# --- Define Portable Directories ---
+
 if [ "$OS" == "Darwin" ]; then
+    # macOS: Use portable data in app bundle (single-user installs to /Applications)
     DATA_DIR="$SCRIPT_DIR/../Resources/code-portable-data"
+    EXT_DIR="$DATA_DIR/extensions"
 else
-    DATA_DIR="$SCRIPT_DIR/../code-portable-data"
+    # Linux: Use per-user portable data for multi-user shared deployments
+    USER_PORTABLE_DIR="$HOME/.orion-studio"
+    TEMPLATE_DIR="$SCRIPT_DIR/data-template"
+
+    # Check if first run (user portable directory doesn't exist)
+    if [ ! -d "$USER_PORTABLE_DIR/user-data" ]; then
+        echo "First run: Setting up Orion Studio for $USER..."
+        mkdir -p "$USER_PORTABLE_DIR"
+
+        # Copy template if it exists (shared installation)
+        if [ -d "$TEMPLATE_DIR" ]; then
+            echo "Copying bundled settings and extensions..."
+            cp -r "$TEMPLATE_DIR"/* "$USER_PORTABLE_DIR/"
+        else
+            # Fallback: create minimal structure
+            echo "No template found, creating minimal structure..."
+            mkdir -p "$USER_PORTABLE_DIR/user-data/User"
+            mkdir -p "$USER_PORTABLE_DIR/extensions"
+        fi
+        echo "Setup complete."
+    fi
+
+    # Set portable mode to user directory
+    export VSCODE_PORTABLE="$USER_PORTABLE_DIR"
+    DATA_DIR="$USER_PORTABLE_DIR"
+    EXT_DIR="$USER_PORTABLE_DIR/extensions"
 fi
-EXT_DIR="$DATA_DIR/extensions"
 
 # --- Main Logic ---
 
@@ -46,8 +73,10 @@ fi
 
 echo "Launching Orion Studio..."
 if [ "$OS" == "Darwin" ]; then
-    # Launch Electron directly as the main app
+    # macOS: Launch Electron directly with explicit data directories
     "$APP_PATH" --user-data-dir "$DATA_DIR" --extensions-dir "$EXT_DIR" "$@"
 else
+    # Linux: VSCODE_PORTABLE env var handles portable mode
+    # Still pass explicit dirs for compatibility
     "$APP_PATH" --user-data-dir "$DATA_DIR" --extensions-dir "$EXT_DIR" "$@"
 fi

@@ -243,13 +243,14 @@ def setup_portable_mode(install_dir):
         # On macOS, 'code-portable-data' goes alongside the .app
         data_dir = os.path.join(install_dir, "code-portable-data")
     elif system == "Linux":
-        # On Linux, 'data' goes inside the extracted folder
+        # On Linux, use 'data-template' to avoid triggering VS Code's auto portable mode
+        # The launcher will copy this to user's home directory on first run
         contents = os.listdir(install_dir)
         vscode_dir = next((d for d in contents if "VSCode" in d), None)
         if vscode_dir:
-            data_dir = os.path.join(install_dir, vscode_dir, "data")
+            data_dir = os.path.join(install_dir, vscode_dir, "data-template")
         else:
-            data_dir = os.path.join(install_dir, "data")
+            data_dir = os.path.join(install_dir, "data-template")
 
     os.makedirs(data_dir, exist_ok=True)
 
