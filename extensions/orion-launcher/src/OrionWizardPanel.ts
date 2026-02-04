@@ -543,12 +543,13 @@ export class OrionWizardPanel {
                                     Opens a fresh notebook environment ready to use
                                 </p>
                                 <div class="pixi-option" style="margin-top: 16px;">
-                                    <label style="display: flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer; font-size: 0.9em;">
+                                    <label style="display: flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer; font-size: 0.9em;"
+                                           title="Runs 'pixi install' to set up or update the Python environment. May be slow or hang on poor network connections.">
                                         <input type="checkbox" id="installPixiExpress">
                                         Install/update Python environment (pixi install)
                                     </label>
                                     <p style="margin-top: 4px; opacity: 0.6; font-size: 0.8em;">
-                                        Check this if setting up for the first time or updating dependencies
+                                        Check this if setting up for the first time or updating dependencies. May be slow on poor networks.
                                     </p>
                                 </div>
                             </div>
@@ -657,11 +658,11 @@ export class OrionWizardPanel {
                         </div>
 
                         <div class="input-group">
-                            <label>
+                            <label title="Runs 'pixi install' to set up or update the Python environment. May be slow or hang on poor network connections.">
                                 <input type="checkbox" id="installPixiAdvanced"> Install/update Python environment (pixi install)
                             </label>
                             <p style="margin-top: 4px; opacity: 0.6; font-size: 0.8em;">
-                                Check this if setting up for the first time or updating dependencies
+                                Check this if setting up for the first time or updating dependencies. May be slow on poor networks.
                             </p>
                         </div>
 
