@@ -16,6 +16,7 @@ export interface OrionConfig {
   enableCopilot?: boolean;
   setupDate?: string;
   shallow?: boolean;
+  installPixi?: boolean;
 }
 
 /**
@@ -228,14 +229,19 @@ fi`);
   exit 1
 fi`);
 
-    send(`echo "Checking for Pixi..."`);
-    // Basic check and install for Linux (assuming remote is Linux)
-    send(
-      `if ! command -v pixi &> /dev/null; then curl -fsSL https://pixi.sh/install.sh | bash; export PATH="$HOME/.pixi/bin:$PATH"; fi`,
-    );
+    // Install/update pixi environment (only if user opted in)
+    if (config.installPixi) {
+      send(`echo "Checking for Pixi..."`);
+      // Basic check and install for Linux (assuming remote is Linux)
+      send(
+        `if ! command -v pixi &> /dev/null; then curl -fsSL https://pixi.sh/install.sh | bash; export PATH="$HOME/.pixi/bin:$PATH"; fi`,
+      );
 
-    send(`echo "Setting up environment..."`);
-    send(`cd "${remoteTargetDir}" && pixi install`);
+      send(`echo "Setting up environment..."`);
+      send(`cd "${remoteTargetDir}" && pixi install`);
+    } else {
+      send(`echo "Skipping pixi install (not selected)..."`);
+    }
 
     // Note: Extensions are installed via remote.SSH.defaultExtensions setting.
     // We just wait a bit to ensure everything is ready.
@@ -269,18 +275,23 @@ fi`);
         );
       }
 
-      progress.report({ message: "Checking Pixi..." });
-      await pixiService.checkAndInstall();
+      // Install/update pixi environment (only if user opted in)
+      if (config.installPixi) {
+        progress.report({ message: "Checking Pixi..." });
+        await pixiService.checkAndInstall();
 
-      progress.report({ message: "Setting up environment..." });
-      try {
-        await pixiService.runInstall(config.targetDir);
-      } catch (e) {
-        // Warn but proceed
-        vscode.window.showWarningMessage(
-          `Pixi environment setup failed: ${e}. Proceeding to open workspace...`,
-        );
-        console.warn("Pixi install failed", e);
+        progress.report({ message: "Setting up environment..." });
+        try {
+          await pixiService.runInstall(config.targetDir);
+        } catch (e) {
+          // Warn but proceed
+          vscode.window.showWarningMessage(
+            `Pixi environment setup failed: ${e}. Proceeding to open workspace...`,
+          );
+          console.warn("Pixi install failed", e);
+        }
+      } else {
+        progress.report({ message: "Skipping pixi install (not selected)..." });
       }
 
       // Note: Extensions are now handled by remote.SSH.defaultExtensions setting
@@ -299,8 +310,9 @@ fi`);
  * If first time: full clone and create session branch.
  *
  * @param repoId - The repository ID from REPOSITORY_REGISTRY (e.g., 'reduction', 'reconstruction')
+ * @param installPixi - Whether to run pixi install (default: false)
  */
-export async function runExpressSetup(repoId: string): Promise<boolean> {
+export async function runExpressSetup(repoId: string, installPixi: boolean = false): Promise<boolean> {
   // Look up repository from registry
   const repo = getRepositoryById(repoId);
   if (!repo) {
@@ -354,19 +366,23 @@ export async function runExpressSetup(repoId: string): Promise<boolean> {
           await git.checkoutLocalBranch(branchName);
         }
 
-        // Install/update pixi environment
-        progress.report({ message: "Checking Pixi installation..." });
-        await pixiService.checkAndInstall();
+        // Install/update pixi environment (only if user opted in)
+        if (installPixi) {
+          progress.report({ message: "Checking Pixi installation..." });
+          await pixiService.checkAndInstall();
 
-        progress.report({ message: "Setting up Python environment..." });
-        try {
-          await pixiService.runInstall(targetDir);
-        } catch (e) {
-          // Warn but proceed
-          vscode.window.showWarningMessage(
-            `Pixi environment setup failed: ${e}. Proceeding to open workspace...`,
-          );
-          console.warn("Pixi install failed", e);
+          progress.report({ message: "Setting up Python environment..." });
+          try {
+            await pixiService.runInstall(targetDir);
+          } catch (e) {
+            // Warn but proceed
+            vscode.window.showWarningMessage(
+              `Pixi environment setup failed: ${e}. Proceeding to open workspace...`,
+            );
+            console.warn("Pixi install failed", e);
+          }
+        } else {
+          progress.report({ message: "Skipping pixi install (not selected)..." });
         }
 
         // Open workspace

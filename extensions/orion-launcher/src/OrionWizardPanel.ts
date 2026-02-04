@@ -104,8 +104,8 @@ export class OrionWizardPanel {
           case "expressSetup":
             this.dispose();
             const { runExpressSetup } = await import("./extension");
-            // Pass the repository ID from the UI button clicked
-            await runExpressSetup(message.repoId);
+            // Pass the repository ID and installPixi flag from the UI
+            await runExpressSetup(message.repoId, message.installPixi ?? false);
             return;
           case "saveConfig":
             this._saveConfig(message.config);
@@ -542,6 +542,15 @@ export class OrionWizardPanel {
                                 <p class="action-description">
                                     Opens a fresh notebook environment ready to use
                                 </p>
+                                <div class="pixi-option" style="margin-top: 16px;">
+                                    <label style="display: flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer; font-size: 0.9em;">
+                                        <input type="checkbox" id="installPixiExpress">
+                                        Install/update Python environment (pixi install)
+                                    </label>
+                                    <p style="margin-top: 4px; opacity: 0.6; font-size: 0.8em;">
+                                        Check this if setting up for the first time or updating dependencies
+                                    </p>
+                                </div>
                             </div>
 
                             <div class="secondary-action">
@@ -647,6 +656,15 @@ export class OrionWizardPanel {
                             </label>
                         </div>
 
+                        <div class="input-group">
+                            <label>
+                                <input type="checkbox" id="installPixiAdvanced"> Install/update Python environment (pixi install)
+                            </label>
+                            <p style="margin-top: 4px; opacity: 0.6; font-size: 0.8em;">
+                                Check this if setting up for the first time or updating dependencies
+                            </p>
+                        </div>
+
                         <button class="btn" onclick="finishSetup()">Start Orion Studio</button>
                         <button class="btn btn-secondary" onclick="prevStep(2)">Back</button>
                     </div>
@@ -678,8 +696,10 @@ export class OrionWizardPanel {
                         document.getElementById('loading-overlay').classList.add('active');
                         // Disable all express buttons
                         document.querySelectorAll('.btn-express').forEach(btn => btn.disabled = true);
-                        // Send message to extension with the repository ID
-                        vscode.postMessage({ command: 'expressSetup', repoId: repoId });
+                        // Get the pixi install checkbox value
+                        const installPixi = document.getElementById('installPixiExpress').checked;
+                        // Send message to extension with the repository ID and installPixi flag
+                        vscode.postMessage({ command: 'expressSetup', repoId: repoId, installPixi: installPixi });
                     }
 
                     function nextStep(step) {
@@ -776,6 +796,7 @@ export class OrionWizardPanel {
                             targetDir: targetDir,
                             branchName: document.getElementById('branchName').value,
                             enableCopilot: document.getElementById('enableCopilot').checked,
+                            installPixi: document.getElementById('installPixiAdvanced').checked,
                             setupDate: new Date().toISOString()
                         };
 
