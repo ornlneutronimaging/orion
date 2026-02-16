@@ -35,6 +35,6 @@
     "typescript": "^5.3.3"
   },
   "dependencies": {
-    "simple-git": "^3.22.0"
+    "simple-git": "^3.31.1"
   }
 }
