@@ -5,6 +5,23 @@ All notable changes to Orion Studio will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.0] - 2026-03-10
+
+### Changed
+
+- **Updated VS Code base to 1.111.0** (March 2026 release)
+  - New agent permissions and Autopilot mode support
+  - Enhanced chat UI with agent-scoped hooks
+- Updated fallback VS Code version from 1.108.2 to 1.111.0
+- Raised minimum VS Code engine requirement to ^1.111.0
+
+### Added
+
+- **GitHub Copilot Chat** (`GitHub.copilot-chat`) now bundled as a default extension
+  - Previously excluded due to version incompatibility, now compatible with VS Code 1.111.0
+  - Powers the built-in chat panel, agent mode, and conversational AI features
+- Version bump script (`pixi run bump [major|minor|patch|X.Y.Z]`) for easier releases
+
 ## [1.2.0] - 2025-01-08
 
 ### Added
@@ -109,6 +126,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Build: Python 3.11 with Pixi environment management
 - Icon Generation: cairosvg for SVG to PNG/ICNS conversion
 
+[1.4.0]: https://github.com/ornlneutronimaging/orion/compare/v1.3.0...v1.4.0
 [1.2.0]: https://github.com/ornlneutronimaging/orion/compare/v1.1.1...v1.2.0
 [1.1.1]: https://github.com/ornlneutronimaging/orion/compare/v1.1.0...v1.1.1
 [1.0.0]: https://github.com/ornlneutronimaging/orion/releases/tag/v1.0.0
