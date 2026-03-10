@@ -273,11 +273,9 @@ ms-python.python               # Python language support
 ms-python.vscode-pylance       # Python IntelliSense
 ms-python.debugpy              # Python debugger
 GitHub.copilot                 # AI coding assistant
+GitHub.copilot-chat            # AI chat, agent mode, conversational AI
 tamasfe.even-better-toml       # TOML file support
 h5web.vscode-h5web             # HDF5 file visualization
-
-# Excluded (incompatible versions):
-# !GitHub.copilot-chat
 ```
 
 **Extension Format:**
@@ -322,7 +320,7 @@ h5web.vscode-h5web             # HDF5 file visualization
 [workspace]
 name = "orion"
 platforms = ["osx-arm64", "linux-64"]
-version = "1.2.0"
+version = "1.4.0"
 
 [dependencies]
 nodejs = "22.*"      # VS Code's expected runtime
@@ -337,6 +335,7 @@ clean = "rm -rf build dist"
 clean_config = "rm -rf ~/.orion-studio"
 lint = "pre-commit run --all-files"
 lint-install = "pre-commit install"
+bump = "python scripts/bump_version.py"
 ```
 
 ### Missing Platforms
@@ -352,6 +351,7 @@ lint-install = "pre-commit install"
 | `pixi run clean_config` | Remove user config (~/.orion-studio) |
 | `pixi run lint` | Run all linters |
 | `pixi run lint-install` | Install git pre-commit hooks |
+| `pixi run bump` | Bump version across all project files |
 
 ---
 
@@ -507,7 +507,6 @@ Currently no scientific packages bundled (numpy, tomopy, etc.) - these come from
 ### Immediate (Low Effort, High Value)
 1. Add Intel Mac (`osx-64`) to pixi.toml platforms
 2. Create issue templates for GitHub
-3. Fix inconsistency: `GitHub.copilot-chat` in settings but excluded in extensions.txt
 
 ### Short-term (Medium Effort)
 1. Implement git branch/tag selector in status bar
@@ -522,4 +521,4 @@ Currently no scientific packages bundled (numpy, tomopy, etc.) - these come from
 
 ---
 
-*Generated: 2025-01-08 | Orion Studio v1.2.0*
+*Generated: 2026-03-10 | Orion Studio v1.4.0*

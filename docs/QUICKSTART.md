@@ -131,6 +131,9 @@ pixi run lint
 
 # Install pre-commit hooks
 pixi run lint-install
+
+# Bump version for a release
+pixi run bump [major|minor|patch|X.Y.Z]
 ```
 
 ### Project Structure
@@ -169,11 +172,10 @@ Rebuild to include the new extension.
 
 ### Excluding Extensions
 
-Use `# !` prefix to exclude problematic extensions:
+Use `# !` prefix to exclude problematic extensions (e.g., if a dependency conflicts):
 
 ```text
-# Excluded (incompatible):
-# !GitHub.copilot-chat
+# !some-publisher.problematic-extension
 ```
 
 ### Pinning Extension Versions
@@ -389,5 +391,6 @@ After building, verify:
 | Build | `pixi run build` |
 | Clean | `pixi run clean` |
 | Lint | `pixi run lint` |
+| Bump version | `pixi run bump minor` |
 | Run (macOS) | `open "dist/Orion Studio.app"` |
 | Run (Linux) | `./dist/OrionStudio/OrionStudio` |
