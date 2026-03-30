@@ -2,7 +2,7 @@ import * as cp from "child_process";
 import * as fs from "fs";
 import * as path from "path";
 import * as os from "os";
-import * as vscode from "vscode";
+import { modify, applyEdits } from "jsonc-parser";
 
 export class PixiService {
   /**
@@ -20,7 +20,7 @@ export class PixiService {
   /**
    * Write python.defaultInterpreterPath into the workspace's .vscode/settings.json.
    * Merges with existing settings if the file already exists.
-   * Handles JSONC (JSON with comments) which VS Code settings files may contain.
+   * Uses jsonc-parser to preserve comments and formatting in JSONC files.
    */
   public configureWorkspacePython(targetDir: string): boolean {
     const pythonPath = this.getPixiPythonPath(targetDir);
@@ -31,35 +31,23 @@ export class PixiService {
     const vscodeDir = path.join(targetDir, ".vscode");
     const settingsPath = path.join(vscodeDir, "settings.json");
 
-    // Read existing settings or start fresh
-    let settings: Record<string, unknown> = {};
-    if (fs.existsSync(settingsPath)) {
-      try {
-        const content = fs.readFileSync(settingsPath, "utf-8");
-        // Strip JSONC comments (// and /* */) and trailing commas before parsing,
-        // since VS Code settings files may contain them.
-        const stripped = content
-          .replace(/\/\/.*$/gm, "")
-          .replace(/\/\*[\s\S]*?\*\//g, "")
-          .replace(/,\s*([}\]])/g, "$1");
-        const parsed = JSON.parse(stripped);
-        if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
-          settings = parsed;
-        }
-      } catch {
-        console.warn(`Could not parse ${settingsPath}, creating new settings`);
-        settings = {};
-      }
-    }
-
-    // Set the Python interpreter path
-    settings["python.defaultInterpreterPath"] = pythonPath;
-
-    // Write back
     if (!fs.existsSync(vscodeDir)) {
       fs.mkdirSync(vscodeDir, { recursive: true });
     }
-    fs.writeFileSync(settingsPath, JSON.stringify(settings, null, 2) + "\n");
+
+    if (fs.existsSync(settingsPath)) {
+      // Surgically edit existing file, preserving comments and formatting
+      const content = fs.readFileSync(settingsPath, "utf-8");
+      const edits = modify(content, ["python.defaultInterpreterPath"], pythonPath, {
+        formattingOptions: { tabSize: 2, insertSpaces: true },
+      });
+      fs.writeFileSync(settingsPath, applyEdits(content, edits));
+    } else {
+      // Create new file with just the Python path
+      const settings = { "python.defaultInterpreterPath": pythonPath };
+      fs.writeFileSync(settingsPath, JSON.stringify(settings, null, 2) + "\n");
+    }
+
     console.log(`Configured Python interpreter: ${pythonPath}`);
     return true;
   }

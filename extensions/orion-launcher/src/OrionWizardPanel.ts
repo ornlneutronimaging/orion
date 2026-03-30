@@ -189,6 +189,21 @@ export class OrionWizardPanel {
           const success = await runSetup(config, progress);
 
           if (success) {
+            // Store pending notebook for both local and remote setups
+            if (this._context && config.targetDir) {
+              const targetDirName = path.basename(config.targetDir);
+              // For remote, construct path using homedir since config.targetDir
+              // may be a local path; the notebook will be at ~/targetDirName/TOC
+              const tocDir = vscode.env.remoteName
+                ? path.join(os.homedir(), targetDirName)
+                : config.targetDir;
+              const tocPath = path.join(tocDir, TOC_NOTEBOOK);
+              // For local, check existence; for remote, always store (can't check remote fs)
+              if (vscode.env.remoteName || fs.existsSync(tocPath)) {
+                await this._context.globalState.update(PENDING_NOTEBOOK_KEY, tocPath);
+              }
+            }
+
             if (vscode.env.remoteName) {
               // Remote: runSetup already sent "code -r" command to terminal
               // Don't try to open folder from extension - the terminal handles it
@@ -201,13 +216,6 @@ export class OrionWizardPanel {
                 "Setup complete! Opening workspace...",
               );
               if (config.targetDir) {
-                // Store pending notebook to open after workspace loads
-                if (this._context) {
-                  const tocPath = path.join(config.targetDir, TOC_NOTEBOOK);
-                  if (fs.existsSync(tocPath)) {
-                    await this._context.globalState.update(PENDING_NOTEBOOK_KEY, tocPath);
-                  }
-                }
                 const uri = vscode.Uri.file(config.targetDir);
                 vscode.commands.executeCommand("vscode.openFolder", uri);
               }

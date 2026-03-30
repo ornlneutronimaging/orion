@@ -148,14 +148,19 @@ export function activate(context: vscode.ExtensionContext) {
       // Check for a pending notebook to open (set during Express/Advanced setup)
       const pendingNotebook = context.globalState.get<string>(PENDING_NOTEBOOK_KEY);
       if (pendingNotebook) {
-        // Clear the flag first to avoid re-opening on subsequent activations
-        await context.globalState.update(PENDING_NOTEBOOK_KEY, undefined);
-
-        if (fs.existsSync(pendingNotebook)) {
-          const uri = vscode.Uri.file(pendingNotebook);
-          await vscode.commands.executeCommand("vscode.open", uri);
-          console.log(`Opened Table of Contents: ${pendingNotebook}`);
+        // Verify the notebook belongs to the current workspace before opening
+        const workspaceRoot = vscode.workspace.workspaceFolders![0].uri.fsPath;
+        if (pendingNotebook.startsWith(workspaceRoot) && fs.existsSync(pendingNotebook)) {
+          try {
+            const uri = vscode.Uri.file(pendingNotebook);
+            await vscode.commands.executeCommand("vscode.open", uri);
+            console.log(`Opened Table of Contents: ${pendingNotebook}`);
+          } catch (e) {
+            console.warn(`Failed to open pending notebook: ${e}`);
+          }
         }
+        // Clear the flag after attempting (whether it matched or not)
+        await context.globalState.update(PENDING_NOTEBOOK_KEY, undefined);
       }
     }
   }, 500);
@@ -272,23 +277,20 @@ if [ -f "$PIXI_PYTHON" ]; then
   mkdir -p "${remoteTargetDir}/.vscode"
   SETTINGS_FILE="${remoteTargetDir}/.vscode/settings.json"
   if [ -f "$SETTINGS_FILE" ]; then
-    # Merge into existing settings (strip JSONC comments first)
+    # Merge into existing settings; if parsing fails, leave file unchanged
     "$PIXI_PYTHON" -c "
-import json, re, sys
-with open(sys.argv[1]) as f:
-    content = f.read()
-content = re.sub(r'//.*$', '', content, flags=re.MULTILINE)
-content = re.sub(r'/\\*[\\s\\S]*?\\*/', '', content)
-content = re.sub(r',\\s*([}\\]])', r'\\1', content)
-try:
-    s = json.loads(content)
-except Exception:
-    s = {}
-s['python.defaultInterpreterPath'] = sys.argv[2]
-with open(sys.argv[1], 'w') as f:
+import json, sys
+fpath, pypath = sys.argv[1], sys.argv[2]
+with open(fpath) as f:
+    s = json.load(f)
+s['python.defaultInterpreterPath'] = pypath
+with open(fpath, 'w') as f:
     json.dump(s, f, indent=2)
     f.write(chr(10))
-" "$SETTINGS_FILE" "$PIXI_PYTHON"
+" "$SETTINGS_FILE" "$PIXI_PYTHON" 2>/dev/null
+    if [ $? -ne 0 ]; then
+      echo "Warning: Could not merge into existing settings.json (may contain comments). Skipping."
+    fi
   else
     echo '{"python.defaultInterpreterPath": "'$PIXI_PYTHON'"}' > "$SETTINGS_FILE"
   fi
