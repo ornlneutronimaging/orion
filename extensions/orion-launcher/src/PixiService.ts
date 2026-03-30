@@ -10,9 +10,17 @@ export class PixiService {
    * Returns undefined if the environment doesn't exist.
    */
   public getPixiPythonPath(targetDir: string): string | undefined {
-    const pythonPath = path.join(targetDir, ".pixi", "envs", "default", "bin", "python");
-    if (fs.existsSync(pythonPath)) {
-      return pythonPath;
+    const envDir = path.join(targetDir, ".pixi", "envs", "default");
+    // Unix: .pixi/envs/default/bin/python
+    // Windows: .pixi/envs/default/python.exe
+    const candidates = [
+      path.join(envDir, "bin", "python"),
+      path.join(envDir, "python.exe"),
+    ];
+    for (const candidate of candidates) {
+      if (fs.existsSync(candidate)) {
+        return candidate;
+      }
     }
     return undefined;
   }
