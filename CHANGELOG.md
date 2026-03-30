@@ -5,6 +5,25 @@ All notable changes to Orion Studio will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.5.0] - 2026-03-30
+
+### Changed
+
+- **Updated VS Code base to 1.113.0** (latest stable release)
+- Updated fallback VS Code version from 1.111.0 to 1.113.0
+- Raised minimum VS Code engine requirement to ^1.113.0
+
+### Added
+
+- **Auto-configure Python interpreter after setup** — After pixi installs the
+  environment, the workspace `.vscode/settings.json` is automatically updated
+  with `python.defaultInterpreterPath` pointing to the pixi Python. This
+  eliminates the need for users to manually select the interpreter. Works for
+  local (Express and Advanced) and remote SSH setups.
+- **Auto-open Table of Contents notebook after setup** (closes #29) — After
+  Express or Advanced setup completes, `A_TABLE_OF_CONTENTS.ipynb` is
+  automatically opened so users are immediately oriented in the workspace.
+
 ## [1.4.0] - 2026-03-10
 
 ### Changed
@@ -126,6 +145,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Build: Python 3.11 with Pixi environment management
 - Icon Generation: cairosvg for SVG to PNG/ICNS conversion
 
+[1.5.0]: https://github.com/ornlneutronimaging/orion/compare/v1.4.0...v1.5.0
 [1.4.0]: https://github.com/ornlneutronimaging/orion/compare/v1.3.0...v1.4.0
 [1.2.0]: https://github.com/ornlneutronimaging/orion/compare/v1.1.1...v1.2.0
 [1.1.1]: https://github.com/ornlneutronimaging/orion/compare/v1.1.0...v1.1.1
