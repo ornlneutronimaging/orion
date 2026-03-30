@@ -32,7 +32,7 @@
   "devDependencies": {
     "@types/vscode": "^1.110.0",
     "@types/node": "25.x",
-    "typescript": "^5.3.3"
+    "typescript": "^6.0.2"
   },
   "dependencies": {
     "simple-git": "^3.33.0"
