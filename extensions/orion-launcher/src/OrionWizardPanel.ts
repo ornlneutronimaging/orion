@@ -4,6 +4,8 @@ import * as path from "path";
 import * as os from "os";
 import {
   REPOSITORY_REGISTRY,
+  PENDING_NOTEBOOK_KEY,
+  TOC_NOTEBOOK,
   getRepositoryStatus,
   Repository,
   RepositoryStatus,
@@ -36,9 +38,10 @@ export class OrionWizardPanel {
   private readonly _panel: vscode.WebviewPanel;
   private readonly _extensionUri: vscode.Uri;
   private readonly _repoStatuses: RepoStatusData[];
+  private readonly _context?: vscode.ExtensionContext;
   private _disposables: vscode.Disposable[] = [];
 
-  public static async createOrShow(extensionUri: vscode.Uri) {
+  public static async createOrShow(extensionUri: vscode.Uri, context?: vscode.ExtensionContext) {
     const column = vscode.window.activeTextEditor
       ? vscode.window.activeTextEditor.viewColumn
       : undefined;
@@ -75,17 +78,19 @@ export class OrionWizardPanel {
       },
     );
 
-    OrionWizardPanel.currentPanel = new OrionWizardPanel(panel, extensionUri, repoStatuses);
+    OrionWizardPanel.currentPanel = new OrionWizardPanel(panel, extensionUri, repoStatuses, context);
   }
 
   private constructor(
     panel: vscode.WebviewPanel,
     extensionUri: vscode.Uri,
-    repoStatuses: RepoStatusData[]
+    repoStatuses: RepoStatusData[],
+    context?: vscode.ExtensionContext
   ) {
     this._panel = panel;
     this._extensionUri = extensionUri;
     this._repoStatuses = repoStatuses;
+    this._context = context;
 
     // Set the webview's initial html content
     this._update();
@@ -104,8 +109,8 @@ export class OrionWizardPanel {
           case "expressSetup":
             this.dispose();
             const { runExpressSetup } = await import("./extension");
-            // Pass the repository ID and installPixi flag from the UI
-            await runExpressSetup(message.repoId, message.installPixi ?? false);
+            // Pass the repository ID, installPixi flag, and context from the UI
+            await runExpressSetup(message.repoId, message.installPixi ?? false, this._context);
             return;
           case "saveConfig":
             this._saveConfig(message.config);
@@ -184,6 +189,21 @@ export class OrionWizardPanel {
           const success = await runSetup(config, progress);
 
           if (success) {
+            // Store pending notebook for both local and remote setups
+            if (this._context && config.targetDir) {
+              const targetDirName = path.basename(config.targetDir);
+              // For remote, construct path using homedir since config.targetDir
+              // may be a local path; the notebook will be at ~/targetDirName/TOC
+              const tocDir = vscode.env.remoteName
+                ? path.join(os.homedir(), targetDirName)
+                : config.targetDir;
+              const tocPath = path.join(tocDir, TOC_NOTEBOOK);
+              // For local, check existence; for remote, always store (can't check remote fs)
+              if (vscode.env.remoteName || fs.existsSync(tocPath)) {
+                await this._context.globalState.update(PENDING_NOTEBOOK_KEY, tocPath);
+              }
+            }
+
             if (vscode.env.remoteName) {
               // Remote: runSetup already sent "code -r" command to terminal
               // Don't try to open folder from extension - the terminal handles it

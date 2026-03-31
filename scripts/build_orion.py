@@ -6,6 +6,7 @@ import ssl
 import subprocess
 import tarfile
 import tempfile
+import time
 import urllib.request
 import zipfile
 
@@ -14,7 +15,7 @@ import cairosvg
 # Configuration
 APP_NAME = "OrionStudio"
 RESOURCES_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "resources")
-FALLBACK_VSCODE_VERSION = "1.111.0"
+FALLBACK_VSCODE_VERSION = "1.113.0"
 CONFIG_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "config")
 BUILD_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "build")
 DIST_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "dist")
@@ -189,23 +190,32 @@ def create_dmg(app_path, output_path, volume_name="Orion Studio"):
 
         # Create compressed DMG directly (UDZO = zlib compressed, good compatibility)
         # Using -format UDZO skips the need for a temp writable DMG
-        subprocess.run(
-            [
-                "hdiutil",
-                "create",
-                "-volname",
-                volume_name,
-                "-srcfolder",
-                staging_dir,
-                "-ov",
-                "-format",
-                "UDZO",  # zlib compressed (universal compatibility)
-                "-imagekey",
-                "zlib-level=9",  # Maximum compression
-                output_path,
-            ],
-            check=True,
-        )
+        # Retry on "Resource busy" which is flaky on CI runners
+        hdiutil_cmd = [
+            "hdiutil",
+            "create",
+            "-volname",
+            volume_name,
+            "-srcfolder",
+            staging_dir,
+            "-ov",
+            "-format",
+            "UDZO",  # zlib compressed (universal compatibility)
+            "-imagekey",
+            "zlib-level=9",  # Maximum compression
+            output_path,
+        ]
+        for attempt in range(3):
+            result = subprocess.run(hdiutil_cmd, capture_output=True, text=True)
+            if result.returncode == 0:
+                break
+            if "Resource busy" in result.stderr and attempt < 2:
+                print(f"  hdiutil returned 'Resource busy', retrying in 5s (attempt {attempt + 1}/3)...")
+                time.sleep(5)
+            else:
+                print(result.stdout)
+                print(result.stderr, flush=True)
+                result.check_returncode()
 
     final_size = os.path.getsize(output_path) / (1024 * 1024)
     print(f"  Created {output_path} ({final_size:.1f} MB)")

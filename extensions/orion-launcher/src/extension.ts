@@ -103,6 +103,12 @@ export async function getRepositoryStatus(repo: Repository): Promise<{
   }
 }
 
+/** Key used in globalState to store a notebook path to open after window reload. */
+export const PENDING_NOTEBOOK_KEY = "orion.pendingNotebookToOpen";
+
+/** The Table of Contents notebook that serves as the entry point for all repos. */
+export const TOC_NOTEBOOK = "A_TABLE_OF_CONTENTS.ipynb";
+
 export function activate(context: vscode.ExtensionContext) {
   console.log("Orion Launcher is active");
 
@@ -114,7 +120,7 @@ export function activate(context: vscode.ExtensionContext) {
         await vscode.commands.executeCommand("workbench.action.closeFolder");
       } else {
         // No folder open, show wizard directly
-        OrionWizardPanel.createOrShow(context.extensionUri);
+        OrionWizardPanel.createOrShow(context.extensionUri, context);
       }
     }),
   );
@@ -134,9 +140,28 @@ export function activate(context: vscode.ExtensionContext) {
   checkConfigAndLaunch(context);
 
   // Ensure Explorer sidebar is visible when a workspace is open
-  setTimeout(() => {
+  // and open any pending notebook from a previous setup
+  setTimeout(async () => {
     if (vscode.workspace.workspaceFolders?.length) {
       vscode.commands.executeCommand("workbench.view.explorer");
+
+      // Check for a pending notebook to open (set during Express/Advanced setup)
+      const pendingNotebook = context.globalState.get<string>(PENDING_NOTEBOOK_KEY);
+      if (pendingNotebook) {
+        // Verify the notebook belongs to the current workspace before opening
+        const workspaceRoot = vscode.workspace.workspaceFolders![0].uri.fsPath;
+        if (pendingNotebook.startsWith(workspaceRoot) && fs.existsSync(pendingNotebook)) {
+          try {
+            const uri = vscode.Uri.file(pendingNotebook);
+            await vscode.commands.executeCommand("vscode.open", uri);
+            console.log(`Opened Table of Contents: ${pendingNotebook}`);
+          } catch (e) {
+            console.warn(`Failed to open pending notebook: ${e}`);
+          }
+        }
+        // Clear the flag after attempting (whether it matched or not)
+        await context.globalState.update(PENDING_NOTEBOOK_KEY, undefined);
+      }
     }
   }, 500);
 }
@@ -157,7 +182,7 @@ async function checkConfigAndLaunch(context: vscode.ExtensionContext) {
   }
 
   // Show wizard - let user choose Express or Advanced
-  OrionWizardPanel.createOrShow(context.extensionUri);
+  OrionWizardPanel.createOrShow(context.extensionUri, context);
 }
 
 export async function runSetup(
@@ -244,7 +269,35 @@ fi`);
     }
 
     // Note: Extensions are installed via remote.SSH.defaultExtensions setting.
-    // We just wait a bit to ensure everything is ready.
+
+    // Configure Python interpreter to use pixi environment on remote
+    send(`echo "Configuring Python interpreter..."`);
+    send(`PIXI_PYTHON="${remoteTargetDir}/.pixi/envs/default/bin/python"
+if [ -f "$PIXI_PYTHON" ]; then
+  mkdir -p "${remoteTargetDir}/.vscode"
+  SETTINGS_FILE="${remoteTargetDir}/.vscode/settings.json"
+  if [ -f "$SETTINGS_FILE" ]; then
+    # Merge into existing settings; if parsing fails, leave file unchanged
+    "$PIXI_PYTHON" -c "
+import json, sys
+fpath, pypath = sys.argv[1], sys.argv[2]
+with open(fpath) as f:
+    s = json.load(f)
+s['python.defaultInterpreterPath'] = pypath
+with open(fpath, 'w') as f:
+    json.dump(s, f, indent=2)
+    f.write(chr(10))
+" "$SETTINGS_FILE" "$PIXI_PYTHON" 2>/dev/null
+    if [ $? -ne 0 ]; then
+      echo "Warning: Could not merge into existing settings.json (may contain comments). Skipping."
+    fi
+  else
+    echo '{"python.defaultInterpreterPath": "'$PIXI_PYTHON'"}' > "$SETTINGS_FILE"
+  fi
+  echo "Python interpreter configured: $PIXI_PYTHON"
+else
+  echo "Pixi Python not found, skipping interpreter configuration"
+fi`);
 
     send(`echo "Setup complete. Opening folder..."`);
     // Attempt to open the folder in the same window
@@ -294,6 +347,12 @@ fi`);
         progress.report({ message: "Skipping pixi install (not selected)..." });
       }
 
+      // Configure Python interpreter to use pixi environment (if available)
+      progress.report({ message: "Configuring Python interpreter..." });
+      if (pixiService.configureWorkspacePython(config.targetDir)) {
+        console.log("Python interpreter configured to pixi environment");
+      }
+
       // Note: Extensions are now handled by remote.SSH.defaultExtensions setting
 
       return true;
@@ -312,7 +371,7 @@ fi`);
  * @param repoId - The repository ID from REPOSITORY_REGISTRY (e.g., 'reduction', 'reconstruction')
  * @param installPixi - Whether to run pixi install (default: false)
  */
-export async function runExpressSetup(repoId: string, installPixi: boolean = false): Promise<boolean> {
+export async function runExpressSetup(repoId: string, installPixi: boolean = false, context?: vscode.ExtensionContext): Promise<boolean> {
   // Look up repository from registry
   const repo = getRepositoryById(repoId);
   if (!repo) {
@@ -385,8 +444,23 @@ export async function runExpressSetup(repoId: string, installPixi: boolean = fal
           progress.report({ message: "Skipping pixi install (not selected)..." });
         }
 
+        // Configure Python interpreter to use pixi environment (if available)
+        progress.report({ message: "Configuring Python interpreter..." });
+        if (pixiService.configureWorkspacePython(targetDir)) {
+          console.log("Python interpreter configured to pixi environment");
+        }
+
         // Open workspace
         progress.report({ message: "Opening workspace..." });
+
+        // Store pending notebook to open after workspace loads
+        if (context) {
+          const tocPath = path.join(targetDir, TOC_NOTEBOOK);
+          if (fs.existsSync(tocPath)) {
+            await context.globalState.update(PENDING_NOTEBOOK_KEY, tocPath);
+          }
+        }
+
         vscode.window.showInformationMessage(
           `${repo.displayName} setup complete! Session branch: ${branchName}`,
         );
