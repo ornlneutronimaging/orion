@@ -43,17 +43,22 @@ export class PixiService {
       fs.mkdirSync(vscodeDir, { recursive: true });
     }
 
-    if (fs.existsSync(settingsPath)) {
-      // Surgically edit existing file, preserving comments and formatting
-      const content = fs.readFileSync(settingsPath, "utf-8");
-      const edits = modify(content, ["python.defaultInterpreterPath"], pythonPath, {
-        formattingOptions: { tabSize: 2, insertSpaces: true },
-      });
-      fs.writeFileSync(settingsPath, applyEdits(content, edits));
-    } else {
-      // Create new file with just the Python path
-      const settings = { "python.defaultInterpreterPath": pythonPath };
-      fs.writeFileSync(settingsPath, JSON.stringify(settings, null, 2) + "\n");
+    try {
+      if (fs.existsSync(settingsPath)) {
+        // Surgically edit existing file, preserving comments and formatting
+        const content = fs.readFileSync(settingsPath, "utf-8");
+        const edits = modify(content, ["python.defaultInterpreterPath"], pythonPath, {
+          formattingOptions: { tabSize: 2, insertSpaces: true },
+        });
+        fs.writeFileSync(settingsPath, applyEdits(content, edits));
+      } else {
+        // Create new file with just the Python path
+        const settings = { "python.defaultInterpreterPath": pythonPath };
+        fs.writeFileSync(settingsPath, JSON.stringify(settings, null, 2) + "\n");
+      }
+    } catch (e) {
+      console.warn(`Failed to configure Python interpreter in ${settingsPath}: ${e}`);
+      return false;
     }
 
     console.log(`Configured Python interpreter: ${pythonPath}`);
