@@ -80,16 +80,18 @@ export class PixiService {
    * falsely reporting that ipykernel is not installed.
    */
   private registerJupyterKernel(pythonPath: string, kernelName: string, displayName: string): void {
-    try {
-      cp.execSync(
-        `"${pythonPath}" -m ipykernel install --user --name "${kernelName}" --display-name "${displayName}"`,
-        { stdio: "pipe" },
-      );
-      console.log(`Registered Jupyter kernel: ${kernelName}`);
-    } catch (e) {
-      // Not fatal — ipykernel may not be installed yet in some environments.
-      console.warn(`Failed to register Jupyter kernel: ${e}`);
-    }
+    cp.execFile(
+      pythonPath,
+      ["-m", "ipykernel", "install", "--user", "--name", kernelName, "--display-name", displayName],
+      (error) => {
+        if (error) {
+          // Not fatal — ipykernel may not be installed yet in some environments.
+          console.warn(`Failed to register Jupyter kernel: ${error instanceof Error ? error.message : String(error)}`);
+          return;
+        }
+        console.log(`Registered Jupyter kernel: ${kernelName}`);
+      },
+    );
   }
 
   public async checkAndInstall(
