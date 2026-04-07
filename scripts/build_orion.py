@@ -15,7 +15,7 @@ import cairosvg
 # Configuration
 APP_NAME = "OrionStudio"
 RESOURCES_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "resources")
-FALLBACK_VSCODE_VERSION = "1.113.0"
+FALLBACK_VSCODE_VERSION = "1.114.0"
 CONFIG_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "config")
 BUILD_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "build")
 DIST_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "dist")

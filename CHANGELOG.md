@@ -5,6 +5,26 @@ All notable changes to Orion Studio will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.5.1] - 2026-04-07
+
+### Fixed
+
+- **Explicit Jupyter kernel registration** — After pixi environment setup,
+  the kernel is now registered explicitly via `ipykernel install --user`,
+  preventing VS Code from falsely reporting ipykernel as missing due to
+  fragile auto-discovery with pixi-managed environments.
+- Each notebook repo (Reduction, Reconstruction) gets its own named kernel
+  (`orion-orion_notebooks`, `orion-orion_ct_recon`) to avoid cross-environment
+  conflicts.
+
+### Changed
+
+- **Updated VS Code base to 1.114.0** (latest stable release)
+- Updated fallback VS Code version from 1.113.0 to 1.114.0
+- Raised minimum VS Code engine requirement to ^1.114.0
+- Kernel registration uses async `execFile` (no shell) for safety and to
+  avoid blocking the extension host event loop
+
 ## [1.5.0] - 2026-03-30
 
 ### Changed
@@ -145,6 +165,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Build: Python 3.11 with Pixi environment management
 - Icon Generation: cairosvg for SVG to PNG/ICNS conversion
 
+[1.5.1]: https://github.com/ornlneutronimaging/orion/compare/v1.5.0...v1.5.1
 [1.5.0]: https://github.com/ornlneutronimaging/orion/compare/v1.4.0...v1.5.0
 [1.4.0]: https://github.com/ornlneutronimaging/orion/compare/v1.3.0...v1.4.0
 [1.2.0]: https://github.com/ornlneutronimaging/orion/compare/v1.1.1...v1.2.0
