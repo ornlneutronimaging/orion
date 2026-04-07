@@ -62,7 +62,30 @@ export class PixiService {
     }
 
     console.log(`Configured Python interpreter: ${pythonPath}`);
+
+    // Register the pixi environment as a Jupyter kernel so VS Code doesn't
+    // rely on fragile auto-discovery (which often reports ipykernel as missing).
+    this.registerJupyterKernel(pythonPath);
+
     return true;
+  }
+
+  /**
+   * Register the pixi Python as an explicit Jupyter kernel spec.
+   * This prevents VS Code from binding to the wrong interpreter and
+   * falsely reporting that ipykernel is not installed.
+   */
+  private registerJupyterKernel(pythonPath: string): void {
+    try {
+      cp.execSync(
+        `"${pythonPath}" -m ipykernel install --user --name orion-default --display-name "Orion (default)"`,
+        { stdio: "pipe" },
+      );
+      console.log("Registered Jupyter kernel: orion-default");
+    } catch (e) {
+      // Not fatal — ipykernel may not be installed yet in some environments.
+      console.warn(`Failed to register Jupyter kernel: ${e}`);
+    }
   }
 
   public async checkAndInstall(
