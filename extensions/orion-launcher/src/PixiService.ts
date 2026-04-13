@@ -83,7 +83,7 @@ export class PixiService {
     cp.execFile(
       pythonPath,
       ["-m", "ipykernel", "install", "--user", "--name", kernelName, "--display-name", displayName],
-      (error) => {
+      (error: Error | null) => {
         if (error) {
           // Not fatal — ipykernel may not be installed yet in some environments.
           console.warn(`Failed to register Jupyter kernel: ${error instanceof Error ? error.message : String(error)}`);
@@ -125,15 +125,15 @@ export class PixiService {
         shell: true,
       });
 
-      child.stdout.on("data", (data) => {
+      child.stdout.on("data", (data: string | Buffer) => {
         console.log(`pixi stdout: ${data}`);
       });
 
-      child.stderr.on("data", (data) => {
+      child.stderr.on("data", (data: string | Buffer) => {
         console.error(`pixi stderr: ${data}`);
       });
 
-      child.on("close", (code) => {
+      child.on("close", (code: number | null) => {
         if (code === 0) {
           resolve();
         } else {
@@ -166,7 +166,7 @@ export class PixiService {
   private async installPixi(): Promise<void> {
     const installCmd = "curl -fsSL https://pixi.sh/install.sh | bash";
     return new Promise((resolve, reject) => {
-      cp.exec(installCmd, (err, stdout, stderr) => {
+      cp.exec(installCmd, (err: Error | null, stdout: string, stderr: string) => {
         if (err) {
           reject(err);
         } else {
