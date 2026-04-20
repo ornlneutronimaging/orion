@@ -5,6 +5,30 @@ All notable changes to Orion Studio will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.6.0] - 2026-04-16
+
+### Changed
+
+- **Updated VS Code base to 1.116.0** (April 2026 release)
+  - GitHub Copilot (inline suggestions) and Copilot Chat are now built-in
+    extensions shipped with VS Code — no longer need to be bundled separately
+- Updated fallback VS Code version from 1.114.0 to 1.116.0
+- Raised minimum VS Code engine requirement to ^1.116.0
+
+### Removed
+
+- **`GitHub.copilot` and `GitHub.copilot-chat` from bundled extensions** — Both
+  are now built-in to VS Code 1.116+. Bundling them separately is no longer
+  needed and could cause conflicts with the built-in versions.
+- Removed `github.copilot` and `github.copilot-chat` from
+  `remote.SSH.defaultExtensions` (built-in extensions auto-install on remotes)
+
+### Added
+
+- **Known limitation documented**: Orion Studio cannot run simultaneously on
+  multiple analysis machines that share the same NFS-mounted home directory,
+  due to Chromium's `SingletonLock` mechanism
+
 ## [1.5.1] - 2026-04-07
 
 ### Fixed
@@ -165,6 +189,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Build: Python 3.11 with Pixi environment management
 - Icon Generation: cairosvg for SVG to PNG/ICNS conversion
 
+[1.6.0]: https://github.com/ornlneutronimaging/orion/compare/v1.5.1...v1.6.0
 [1.5.1]: https://github.com/ornlneutronimaging/orion/compare/v1.5.0...v1.5.1
 [1.5.0]: https://github.com/ornlneutronimaging/orion/compare/v1.4.0...v1.5.0
 [1.4.0]: https://github.com/ornlneutronimaging/orion/compare/v1.3.0...v1.4.0

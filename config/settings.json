@@ -23,8 +23,6 @@
     "ms-python.python",
     "ms-python.vscode-pylance",
     "ms-python.debugpy",
-    "github.copilot",
-    "github.copilot-chat",
     "tamasfe.even-better-toml"
   ]
 }
