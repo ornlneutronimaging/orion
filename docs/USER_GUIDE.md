@@ -356,6 +356,20 @@ Try prompts like:
 
 ## Troubleshooting
 
+### Cannot Run on Two Analysis Machines Simultaneously
+
+**Cause**: Orion Studio (via Electron/Chromium) creates a `SingletonLock` file in `~/.orion-studio/` when it starts. This lock contains the hostname and process ID of the running instance. When you try to launch Orion on a second analysis machine that shares the same NFS-mounted home directory, it detects that the lock was created by a different host and refuses to start with a "profile in use" error.
+
+This is an intentional Chromium safety mechanism to prevent data corruption from concurrent writes to the same profile directory.
+
+**Workaround**: Close Orion Studio on the first machine before launching it on the second. If the first machine crashed or became unreachable and left a stale lock, you can manually remove it:
+
+```bash
+rm -f ~/.orion-studio/SingletonLock ~/.orion-studio/SingletonSocket ~/.orion-studio/SingletonCookie
+```
+
+> **Warning**: Do not delete these files while Orion is still running on another machine. Running two instances against the same profile directory simultaneously can corrupt settings and extension databases.
+
 ### Connection Issues
 
 #### "Connection refused" when connecting to remote
@@ -512,4 +526,4 @@ Open an issue at: https://github.com/ornlneutronimaging/orion/issues
 
 ---
 
-*Last updated: December 2025*
+*Last updated: April 2026*
