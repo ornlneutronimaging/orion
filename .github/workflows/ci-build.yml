@@ -26,8 +26,6 @@ jobs:
 
       - name: Install Pixi
         uses: prefix-dev/setup-pixi@v0.9.5
-        with:
-          pixi-version: v0.39.2
 
       - name: Install Linux Dependencies
         if: runner.os == 'Linux'
