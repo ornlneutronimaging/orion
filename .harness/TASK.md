@@ -120,3 +120,11 @@ Decision 2 -> R6.
       `ms-toolsai.jupyter@2026.6.2026071001` pre-release escape hatch -> PASS; `@9999.9.9` -> `None`
       ("Version 9999.9.9 not found for ms-toolsai.jupyter on darwin-arm64") PASS. Confirms the
       platform filter did not break explicit `id@version` pinning (R18 re-verified post-fix).
+- [x] R25: Linux platform-correctness verified WITHOUT a Linux box (ci-build.yml uploads no artifact
+      to inspect). `pixi run python` with `get_target_platform` patched to `linux-x64` vs
+      `darwin-arm64` -> `ms-toolsai.jupyter` resolves asset `1760397611682` (linux) vs `1760397617645`
+      (darwin) and `ms-python.python` `1773338139366` vs `1773338164586` — DISTINCT per-platform
+      VSIXs; while genuinely universal packages (`ms-python.vscode-pylance`, `tamasfe.even-better-toml`)
+      resolve the SAME asset on both. This is exactly correct behavior, and closes the review's
+      "Linux likely mis-picking too / not verified" gap. CI: `gh run view 29289932263` -> both
+      macos-latest and ubuntu-latest `success`.
