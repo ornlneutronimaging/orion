@@ -11,7 +11,7 @@ Orion Studio uses a **wrapper approach** rather than forking VS Code (like VSCod
 | Approach | Orion (Wrapper) | Fork (VSCodium-style) |
 |----------|-----------------|----------------------|
 | Build time | ~5 minutes | 30-60 minutes |
-| VS Code updates | Automatic (downloads latest) | Manual merge conflicts |
+| VS Code updates | Pinned; bump one constant | Manual merge conflicts |
 | Customization | Extension-based only | Full core modification |
 | Maintenance | Low | High |
 
@@ -214,7 +214,7 @@ Uses the `remote.SSH.defaultExtensions` setting to auto-install extensions on re
 ### Build Script Flow (build_orion.py)
 
 ```
-1. get_latest_version()     → Query VS Code API for latest stable
+1. get_vscode_version()     → Pinned VSCODE_VERSION (ORION_VSCODE_VERSION overrides)
 2. get_download_url()       → Construct platform-specific download URL
 3. download_file()          → Download ZIP/tar.gz
 4. extract_file()           → Extract with proper permissions
@@ -279,7 +279,7 @@ h5web.vscode-h5web             # HDF5 file visualization
 ```
 
 **Extension Format:**
-- `publisher.name` - Latest version
+- `publisher.name` - Latest release-channel version (pre-release builds are skipped)
 - `publisher.name@1.2.3` - Pinned version
 - `# !publisher.name` - Excluded (for dependency conflicts)
 
@@ -288,16 +288,16 @@ h5web.vscode-h5web             # HDF5 file visualization
 ```json
 {
   "workbench.startupEditor": "none",        // Don't show welcome tab
-  "workbench.colorTheme": "Default Light Modern",
+  "workbench.colorTheme": "Light Modern",
   "workbench.iconTheme": "vs-seti",
   "security.workspace.trust.enabled": false, // Disable trust prompts
   "telemetry.telemetryLevel": "off",         // Privacy
   "update.mode": "manual",                   // No auto-update
-  "extensions.autoUpdate": true,
+  "extensions.autoUpdate": "on",
   "window.title": "Orion Studio",
   "remote.SSH.showLoginTerminal": true,
   "remote.SSH.useLocalServer": false,
-  "workbench.activityBar.visible": false,    // Hidden for simpler UI
+  "workbench.activityBar.location": "hidden",    // Hidden for simpler UI
   "workbench.statusBar.visible": true,
   "window.menuBarVisibility": "compact",     // Minimal menu
   "jupyter.askForKernelRestart": false,
