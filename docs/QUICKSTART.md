@@ -48,7 +48,7 @@ pixi run build
 This single command:
 
 1. Installs Python 3.11 and Node.js 22.x (via pixi)
-2. Downloads the latest VS Code
+2. Downloads the pinned VS Code version
 3. Compiles the orion-launcher extension
 4. Installs all bundled extensions
 5. Creates the packaged application

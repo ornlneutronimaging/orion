@@ -279,6 +279,17 @@ def setup_portable_mode(install_dir):
     return data_dir
 
 
+def get_target_platform():
+    """The marketplace targetPlatform id for the machine we are building for."""
+    system = platform.system()
+    machine = platform.machine()
+    if system == "Darwin":
+        return "darwin-arm64" if machine == "arm64" else "darwin-x64"
+    if system == "Linux":
+        return "linux-arm64" if machine == "aarch64" else "linux-x64"
+    raise Exception(f"Unsupported platform: {system} {machine}")
+
+
 def is_prerelease(version_entry):
     """True if this gallery version is a pre-release build rather than a release."""
     return any(
@@ -342,11 +353,24 @@ def get_extension_info(extension_id):
             if not versions:
                 return None
 
+            # The gallery returns a SEPARATE version entry per targetPlatform for
+            # platform-specific extensions (Python, Pylance, debugpy, Jupyter all ship
+            # native binaries), and their order is arbitrary. Pick the entry built for THIS
+            # machine, or a universal one (no targetPlatform). Getting this wrong silently
+            # packages Windows .exe / Linux .so payloads into a macOS app.
+            target_platform = get_target_platform()
+
+            def matches_platform(v):
+                vp = v.get("targetPlatform")
+                return vp is None or vp == target_platform
+
             # Find the requested version, or else the newest release-channel version.
             # Versions come back newest-first. An explicit `id@version` pin in
             # extensions.txt still selects that exact build, pre-release or not.
             target_version = None
             for v in versions:
+                if not matches_platform(v):
+                    continue
                 if version:
                     if v["version"] == version:
                         target_version = v
@@ -357,12 +381,13 @@ def get_extension_info(extension_id):
 
             if not target_version:
                 if version:
-                    print(f"    Version {version} not found for {extension_id}")
+                    print(f"    Version {version} not found for {extension_id} on {target_platform}")
                 else:
-                    print(f"    No release-channel version found for {extension_id}")
+                    print(f"    No release-channel version found for {extension_id} on {target_platform}")
                 return None
 
-            # Find VSIX download URL
+            # Find VSIX download URL. This comes from the selected version entry, so it is
+            # already the correct platform's asset.
             vsix_url = None
             for file in target_version.get("files", []):
                 if file.get("assetType") == "Microsoft.VisualStudio.Services.VSIXPackage":
@@ -379,29 +404,13 @@ def get_extension_info(extension_id):
                 elif key == "Microsoft.VisualStudio.Code.ExtensionPack" and value:
                     dependencies.extend([d.strip() for d in value.split(",") if d.strip()])
 
-            # Check for platform-specific packages
-            target_platform = None
-            system = platform.system()
-            machine = platform.machine()
-            if system == "Darwin":
-                target_platform = "darwin-arm64" if machine == "arm64" else "darwin-x64"
-            elif system == "Linux":
-                target_platform = "linux-arm64" if machine == "aarch64" else "linux-x64"
-
-            # Try platform-specific URL
-            if target_platform:
-                platform_url = f"https://{publisher}.gallery.vsassets.io/_apis/public/gallery/publisher/{publisher}/extension/{name}/{target_version['version']}/assetbyname/Microsoft.VisualStudio.Services.VSIXPackage?targetPlatform={target_platform}"
-                # Test if platform-specific exists
-                try:
-                    test_req = urllib.request.Request(platform_url, method="HEAD")
-                    with urllib.request.urlopen(test_req, context=ctx) as resp:
-                        if resp.status == 200:
-                            vsix_url = platform_url
-                except (urllib.error.URLError, urllib.error.HTTPError):
-                    pass  # Fall back to universal
-
             if not vsix_url:
-                # Construct fallback URL
+                # The gallery ignores ?targetPlatform= on this endpoint, so a constructed
+                # URL can only ever return the universal asset. Only safe when the selected
+                # entry is itself universal.
+                if target_version.get("targetPlatform"):
+                    print(f"    No VSIX asset for {extension_id} on {target_platform}")
+                    return None
                 vsix_url = f"https://{publisher}.gallery.vsassets.io/_apis/public/gallery/publisher/{publisher}/extension/{name}/{target_version['version']}/assetbyname/Microsoft.VisualStudio.Services.VSIXPackage"
 
             return {
@@ -550,11 +559,17 @@ def install_extensions(install_dir, data_dir):
             processing.discard(ext_id_lower)
             return False
 
-        # Install dependencies first (skip excluded/installed/processing)
+        # Install dependencies first (skip excluded/installed/processing). A dependency that
+        # fails must fail its parent too — most bundled extensions (Pylance, debugpy,
+        # jupyter-renderers, python-envs) arrive as pack/dependency members, not top-level
+        # entries, so not propagating this would leave them silently missing from the build.
         for dep in ext_info.get("dependencies", []):
             dep_lower = dep.lower()
             if dep_lower not in excluded and dep_lower not in installed and dep_lower not in processing:
-                install_with_dependencies(dep, indent + 2)
+                if not install_with_dependencies(dep, indent + 2):
+                    print(f"{' ' * indent}  Dependency {dep} failed")
+                    processing.discard(ext_id_lower)
+                    return False
 
         # Install the extension itself
         if download_and_install_vsix(ext_info, extensions_dir):

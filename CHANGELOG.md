@@ -36,6 +36,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `workbench.colorTheme: "Default Light Modern"` → `"Light Modern"` (the `Default`
     prefix was dropped from the built-in theme ids)
 
+### Fixed
+
+- **Bundled extensions were being downloaded for the wrong platform.** The Marketplace
+  returns a separate entry per `targetPlatform` for extensions that ship native binaries
+  (Python, Pylance, debugpy, Jupyter), and the build picked one arbitrarily — so the macOS
+  app shipped Windows `pet.exe` / `pylance-indexer.exe` and Linux `.so` files, and Jupyter
+  arrived with only a `win32-x64` zeromq prebuild, which breaks notebook kernels on macOS.
+  The build now selects the entry matching the machine it is building for. A
+  `?targetPlatform=` probe that was supposed to catch this never worked: the gallery
+  answers `HTTP 405` to `HEAD`, and the error was swallowed.
+- The build now **fails** if a bundled extension (or any of its dependencies) cannot be
+  resolved or installed, instead of exiting 0 with an artifact silently missing it.
+
 ### Notes
 
 - `@types/vscode` stays at `^1.125.0`: DefinitelyTyped has not published typings newer
