@@ -5,6 +5,56 @@ All notable changes to Orion Studio will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.7.0] - 2026-07-13
+
+### Changed
+
+- **Updated VS Code base to 1.127.0** (July 2026 release, up from 1.116.0)
+  - No bundled extension became built-in across 1.117–1.127, so unlike the 1.6.0
+    Copilot change, nothing had to be removed from `config/extensions.txt`
+  - 1.128.0 was deliberately skipped: it ships a known UI performance regression
+    (microsoft/vscode#324985, fixed only in 1.129.0) and upstream is still serving
+    1.127.0 on the stable update channel
+- **The VS Code base version is now actually pinned.** `scripts/build_orion.py` used to
+  download whichever version the update API listed as newest at build time, so the
+  version recorded in this repo could silently disagree with the version in the shipped
+  artifact, and two builds of the same tag could ship different bases. The version is now
+  a single constant (`VSCODE_VERSION`), overridable with `ORION_VSCODE_VERSION=<x.y.z>`
+  (or `=latest` to track upstream).
+- **Bundled extensions now come from the release channel instead of the pre-release
+  channel.** The Marketplace query requested only the newest build of each extension,
+  which is the *pre-release* build whenever a publisher ships that channel. Orion was
+  therefore shipping pre-release builds of Python, Pylance, Jupyter, debugpy and
+  Remote-SSH. Explicit `id@version` pins in `config/extensions.txt` still work and can
+  still select a pre-release build if one is ever needed.
+- Raised minimum VS Code engine requirement to `^1.127.0`
+- Migrated three default settings to their current VS Code schema. Behavior is unchanged;
+  VS Code had been silently rewriting the shipped `settings.json` on first launch:
+  - `workbench.activityBar.visible: false` → `workbench.activityBar.location: "hidden"`
+  - `extensions.autoUpdate: true` → `extensions.autoUpdate: "on"` (VS Code 1.125 retyped
+    this setting to a string enum of `on`/`off`)
+  - `workbench.colorTheme: "Default Light Modern"` → `"Light Modern"` (the `Default`
+    prefix was dropped from the built-in theme ids)
+
+### Fixed
+
+- **Bundled extensions were being downloaded for the wrong platform.** The Marketplace
+  returns a separate entry per `targetPlatform` for extensions that ship native binaries
+  (Python, Pylance, debugpy, Jupyter), and the build picked one arbitrarily — so the macOS
+  app shipped Windows `pet.exe` / `pylance-indexer.exe` and Linux `.so` files, and Jupyter
+  arrived with only a `win32-x64` zeromq prebuild, which breaks notebook kernels on macOS.
+  The build now selects the entry matching the machine it is building for. A
+  `?targetPlatform=` probe that was supposed to catch this never worked: the gallery
+  answers `HTTP 405` to `HEAD`, and the error was swallowed.
+- The build now **fails** if a bundled extension (or any of its dependencies) cannot be
+  resolved or installed, instead of exiting 0 with an artifact silently missing it.
+
+### Notes
+
+- `@types/vscode` stays at `^1.125.0`: DefinitelyTyped has not published typings newer
+  than 1.125.0, so raising it to match the engine floor would break `npm install`.
+  Types at or below the engine floor is the correct direction.
+
 ## [1.6.0] - 2026-04-16
 
 ### Changed
@@ -189,6 +239,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Build: Python 3.11 with Pixi environment management
 - Icon Generation: cairosvg for SVG to PNG/ICNS conversion
 
+[1.7.0]: https://github.com/ornlneutronimaging/orion/compare/v1.6.0...v1.7.0
 [1.6.0]: https://github.com/ornlneutronimaging/orion/compare/v1.5.1...v1.6.0
 [1.5.1]: https://github.com/ornlneutronimaging/orion/compare/v1.5.0...v1.5.1
 [1.5.0]: https://github.com/ornlneutronimaging/orion/compare/v1.4.0...v1.5.0

@@ -53,7 +53,7 @@ orion/
 
 The build script (`scripts/build_orion.py`) performs these steps:
 
-1. **Download VS Code**: Fetches latest stable VS Code from Microsoft's CDN
+1. **Download VS Code**: Fetches the pinned VS Code version (`VSCODE_VERSION`) from Microsoft's CDN
 2. **Create Wrapper App**: On macOS, creates `Orion Studio.app` bundle containing VS Code
 3. **Setup Portable Mode**: Configures VS Code to use bundled data directory
 4. **Build orion-launcher**: Compiles the custom extension
@@ -61,7 +61,7 @@ The build script (`scripts/build_orion.py`) performs these steps:
 
 ### Key Components
 
-**`get_latest_version()`** - Queries VS Code release API for latest stable version
+**`get_vscode_version()`** - Returns the pinned `VSCODE_VERSION`. Set `ORION_VSCODE_VERSION=<x.y.z>` to override, or `ORION_VSCODE_VERSION=latest` to query the VS Code release API for the newest stable
 
 **`download_and_install_vsix()`** - Downloads extensions directly from marketplace:
 
@@ -223,7 +223,15 @@ The `config/settings.json` provides sensible defaults:
 
 ### Updating VS Code
 
-The build script automatically fetches the latest stable VS Code. No manual intervention needed.
+The VS Code base is pinned, so every build — local, CI, and release — ships the same version.
+To move it, edit `VSCODE_VERSION` in `scripts/build_orion.py` and record the change in `CHANGELOG.md`.
+
+To try a different base without editing the pin:
+
+```bash
+ORION_VSCODE_VERSION=1.128.0 pixi run build   # a specific version
+ORION_VSCODE_VERSION=latest   pixi run build   # whatever upstream ships today
+```
 
 ### Updating Extensions
 

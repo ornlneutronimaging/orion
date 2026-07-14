@@ -2,9 +2,9 @@
   "name": "orion-launcher",
   "displayName": "Orion Launcher",
   "description": "Welcome wizard and setup for Orion Studio",
-  "version": "1.6.0",
+  "version": "1.7.0",
   "engines": {
-    "vscode": "^1.116.0"
+    "vscode": "^1.127.0"
   },
   "categories": [
     "Other"

@@ -97,7 +97,7 @@ Build outputs are uploaded as artifacts with 5-day retention:
 
 1. **Pixi Setup:** Installs Python 3.11 and Node.js 22.x
 2. **Build Script:** Runs `python scripts/build_orion.py`
-3. **Download VS Code:** Fetches latest stable from Microsoft
+3. **Download VS Code:** Fetches the pinned `VSCODE_VERSION` from Microsoft
 4. **Extension Install:** Downloads VSIXs from marketplace
 5. **Package:** Creates wrapper app bundle
 6. **Compress:** Creates tar.gz for artifact upload
